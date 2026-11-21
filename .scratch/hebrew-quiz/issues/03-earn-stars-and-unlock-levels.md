@@ -4,10 +4,14 @@
 
 **Blocked by:** 02 (Personalize each child’s question pool)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The player can reveal one approved hint per run when a Question offers one.
-- [ ] Each correct first answer earns one star, including after using a hint. Repeating an answer submission cannot add stars or duplicate progress.
-- [ ] The next level opens after at least six correct answers in each of two consecutive completed runs at the child's highest available level. An unfinished run cannot qualify.
-- [ ] Stars and unlocked levels belong to the selected Child Profile and quiz. A sibling's progress is separate, and changing Subjects preserves earned progress.
-- [ ] Coverage verifies the exact qualifying threshold, a below-threshold result, repeated submissions, hint scoring, and separate profile progress through the game's normal entry points.
+- [x] The player can reveal one approved hint per run when a Question offers one.
+- [x] Each correct first answer earns one star, including after using a hint. Repeating an answer submission cannot add stars or duplicate progress.
+- [x] The next level opens after at least six correct answers in each of two consecutive completed runs at the child's highest available level. An unfinished run cannot qualify.
+- [x] Stars and unlocked levels belong to the selected Child Profile and quiz. A sibling's progress is separate, and changing Subjects preserves earned progress.
+- [x] Coverage verifies the exact qualifying threshold, a below-threshold result, repeated submissions, hint scoring, and separate profile progress through the game's normal entry points.
+
+## Comments
+
+The quiz reveals one approved hint per run, shows stars from accepted answers, and unlocks levels after two consecutive completed runs with at least six stars each. Completed progress is scoped to the child and game. Verified all three level boundaries, repeat submissions, sibling isolation, and the phone-width Filament-to-quiz hint flow.

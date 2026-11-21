@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QuizController
 {
-    public function show(Request $request, Team $current_team): Response
+    public function show(Request $request, Team $current_team, QuizProgress $progress): Response
     {
         $profile = $this->profile($request, $current_team);
         $run = $this->runs($profile)->latest('id')->first();
@@ -32,16 +32,24 @@ class QuizController
         return Inertia::render('games/hebrew-quiz', [
             'team' => $current_team->slug,
             'player' => $profile->name,
+            'progress' => [
+                'highestLevel' => $progress->highestLevel($profile),
+                'stars' => $progress->completedStars($profile),
+            ],
             'run' => $run ? [
+                'level' => $run->level,
+                'unlockedLevel' => $run->unlocked_level,
+                'stars' => $run->stars(),
                 'id' => $run->id,
                 'position' => $run->position + 1,
                 'total' => $run->questions()->count(),
                 'completed' => $run->completed_at !== null,
                 'cancelled' => $run->cancelled_at !== null,
-                'score' => $run->completed_at ? $run->questions()->where('is_correct', true)->count() : null,
             ] : null,
             'question' => $run && $question && $content ? [
                 'id' => $question->id,
+                'hintAvailable' => $run->canRevealHintFor($question),
+                'hint' => $run->hint_position === $question->position ? $question->approvedHint() : null,
                 'prompt' => $this->playerField($current_team, $run, $question, 'prompt'),
                 'choices' => array_map(fn (int $slot): array => $this->playerField($current_team, $run, $question, (string) $slot), array_keys($question->choice_order)),
                 'feedback' => $question->answered_at ? [
@@ -67,6 +75,16 @@ class QuizController
         $input = $request->validate(['question' => ['required', 'integer'], 'choice' => ['required', 'integer', 'between:0,3']]);
 
         $answer($selectedRun, (int) $input['question'], (int) $input['choice']);
+
+        return redirect()->route('quiz.play.show', $current_team);
+    }
+
+    public function hint(Request $request, Team $current_team, int $run, RevealQuizHint $revealHint): RedirectResponse
+    {
+        $selectedRun = $this->runs($this->profile($request, $current_team))->findOrFail($run);
+        $input = $request->validate(['question' => ['required', 'integer']]);
+
+        $revealHint($selectedRun, (int) $input['question']);
 
         return redirect()->route('quiz.play.show', $current_team);
     }

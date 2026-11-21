@@ -9,7 +9,7 @@ import {
 } from '@/components/games/question-field';
 import { Button } from '@/components/ui/button';
 import { exit } from '@/routes/child-mode';
-import { advance, answer, start } from '@/routes/quiz/play';
+import { advance, answer, hint, start } from '@/routes/quiz/play';
 
 type Feedback = {
     answer: string;
@@ -21,23 +21,37 @@ type Feedback = {
 type Props = {
     team: string;
     player: string;
+    progress: {
+        highestLevel: number;
+        stars: number;
+    };
     run: {
         id: number;
         position: number;
         total: number;
         completed: boolean;
         cancelled: boolean;
-        score: number | null;
+        level: number;
+        unlockedLevel: number | null;
+        stars: number;
     } | null;
     question: {
         id: number;
         prompt: QuizField;
         choices: QuizField[];
+        hintAvailable: boolean;
+        hint: string | null;
         feedback: Feedback | null;
     } | null;
 };
 
-export default function HebrewQuiz({ team, player, run, question }: Props) {
+export default function HebrewQuiz({
+    team,
+    player,
+    progress,
+    run,
+    question,
+}: Props) {
     const [processing, setProcessing] = useState(false);
     const { errors } = usePage().props;
     const feedback = question?.feedback;
@@ -72,13 +86,23 @@ export default function HebrewQuiz({ team, player, run, question }: Props) {
                         חזרה להורים
                     </a>
                 </header>
+                <p className="text-sm font-medium">
+                    רמה {question && run ? run.level : progress.highestLevel}
+                    {' · '}
+                    {progress.stars} כוכבים שנצברו
+                </p>
                 <section className="grid gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8 dark:bg-slate-900">
                     {run && question ? (
                         <>
                             <div className="grid gap-2">
-                                <p className="font-medium">
-                                    שאלה {run.position} מתוך {run.total}
-                                </p>
+                                <div className="flex flex-wrap justify-between gap-2">
+                                    <p className="font-medium">
+                                        שאלה {run.position} מתוך {run.total}
+                                    </p>
+                                    <p className="text-sm" aria-live="polite">
+                                        {run.stars} כוכבים בסבב
+                                    </p>
+                                </div>
                                 <progress
                                     className="h-2 w-full accent-indigo-600"
                                     aria-label="התקדמות בחידון"
@@ -92,6 +116,33 @@ export default function HebrewQuiz({ team, player, run, question }: Props) {
                                 <h2 className="text-2xl font-semibold">
                                     <QuestionField field={question.prompt} />
                                 </h2>
+                            )}
+                            {question.hintAvailable && (
+                                <Button
+                                    variant="secondary"
+                                    className="min-h-11 justify-self-start"
+                                    data-test="reveal-hint"
+                                    disabled={processing}
+                                    onClick={() =>
+                                        submit(
+                                            hint.url({
+                                                current_team: team,
+                                                run: run.id,
+                                            }),
+                                            { question: question.id },
+                                        )
+                                    }
+                                >
+                                    תנו לי רמז
+                                </Button>
+                            )}
+                            {question.hint && (
+                                <p
+                                    className="rounded-xl bg-indigo-50 p-3 dark:bg-indigo-950"
+                                    role="status"
+                                >
+                                    <BidiText value={question.hint} />
+                                </p>
                             )}
                             <div className="grid gap-3">
                                 {question.choices.map((choice, index) => {
@@ -200,9 +251,16 @@ export default function HebrewQuiz({ team, player, run, question }: Props) {
                                         החידון הסתיים!
                                     </h2>
                                     <p>
-                                        תשובות נכונות: {run.score} מתוך{' '}
-                                        {run.total}
+                                        צברת {run.stars} מתוך {run.total} כוכבים
                                     </p>
+                                    {run.unlockedLevel !== null && (
+                                        <p
+                                            className="font-semibold"
+                                            role="status"
+                                        >
+                                            פתחת את רמה {run.unlockedLevel}!
+                                        </p>
+                                    )}
                                 </>
                             ) : (
                                 <h2 className="text-2xl font-semibold">

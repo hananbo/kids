@@ -54,6 +54,7 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
         ->fill('[data-test="draft-distractor-two"]', 'שש')
         ->fill('[data-test="draft-distractor-three"]', 'שבע')
         ->fill('[data-test="draft-explanation"]', 'חמש היא התשובה.')
+        ->fill('[data-test="draft-hint"]', 'התחילו לספור משתיים.')
         ->click('הוספת מקור')
         ->fill('[data-test="draft-source"]', 'https://example.com/reviewer-source')
         ->click('[data-test="draft-quiz-eligible"]')
@@ -61,6 +62,7 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
         ->assertSee('מה התוצאה של 2 + 3?')
         ->click('tbody tr:first-child [data-test="review-question"]')
         ->assertValue('[data-test="draft-explanation"]', 'חמש היא התשובה.')
+        ->assertValue('[data-test="draft-hint"]', 'התחילו לספור משתיים.')
         ->assertValue('[data-test="draft-source"]', 'https://example.com/reviewer-source')
         ->assertPresent('a[href="https://example.com/reviewer-source"]')
         ->click('[data-test="publish-question-submit"]')
@@ -81,7 +83,11 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
         ->assertPresent('audio[controls][preload="none"]')
         ->assertSeeIn('audio + figcaption', 'טון קצר')
         ->assertDontSee('https://example.com/reviewer-source')
-        ->assertDontSee('חמש היא התשובה.');
+        ->assertDontSee('חמש היא התשובה.')
+        ->assertDontSee('התחילו לספור משתיים.')
+        ->click('[data-test="reveal-hint"]')
+        ->assertSee('התחילו לספור משתיים.')
+        ->assertSee('0 כוכבים בסבב');
 
     expect($page->script('(async () => {
         const audio = document.querySelector("audio");
