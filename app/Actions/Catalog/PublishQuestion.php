@@ -41,13 +41,19 @@ class PublishQuestion
                 'difficulty' => ['required', 'integer', 'between:1,10'],
             ])->validate();
 
-            return $draft->versions()->create([
+            $version = $draft->versions()->create([
                 'locale' => 'he',
                 'content' => $content,
                 ...$metadata,
                 'quiz_eligible' => $draft->quiz_eligible,
                 'approved_by' => auth()->id(),
             ]);
+
+            if ($draft->replaces_question_id !== null && ! $draft->suppresses_original) {
+                $draft->forceFill(['suppresses_original' => true])->save();
+            }
+
+            return $version;
         });
     }
 }
