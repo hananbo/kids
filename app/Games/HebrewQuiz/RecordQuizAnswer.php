@@ -14,7 +14,7 @@ class RecordQuizAnswer
         DB::transaction(function () use ($run, $questionId, $choice): void {
             $run = QuizRun::query()->lockForUpdate()->findOrFail($run->id);
 
-            if ($run->completed_at) {
+            if (! $run->isActive()) {
                 return;
             }
 

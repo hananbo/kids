@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\QuizRunFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string $game
  * @property int $position
  * @property Carbon|null $completed_at
+ * @property Carbon|null $cancelled_at
  */
 #[Fillable(['child_profile_id', 'game', 'position', 'completed_at'])]
 class QuizRun extends Model
@@ -28,7 +31,20 @@ class QuizRun extends Model
         return [
             'position' => 'integer',
             'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->whereNull('completed_at')->whereNull('cancelled_at');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->completed_at === null && $this->cancelled_at === null;
     }
 
     /** @return BelongsTo<ChildProfile, $this> */

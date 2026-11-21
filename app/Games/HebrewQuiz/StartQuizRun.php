@@ -3,9 +3,11 @@
 namespace App\Games\HebrewQuiz;
 
 use App\Models\ChildProfile;
+use App\Models\PublishedQuestionVersion;
 use App\Models\QuizRun;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StartQuizRun
 {
@@ -18,7 +20,7 @@ class StartQuizRun
 
             $active = $profile->quizRuns()
                 ->where('game', SelectQuizQuestions::GAME)
-                ->whereNull('completed_at')
+                ->active()
                 ->latest('id')
                 ->first();
 
@@ -27,6 +29,17 @@ class StartQuizRun
             }
 
             $versions = ($this->selectQuestions)($profile);
+            $availableVersions = PublishedQuestionVersion::query()
+                ->whereKey($versions->pluck('id')->all())
+                ->whereNull('withdrawn_at')
+                ->orderBy('id')
+                ->sharedLock()
+                ->get(['id']);
+
+            if ($availableVersions->count() !== $versions->count()) {
+                throw ValidationException::withMessages(['pool' => 'מאגר השאלות השתנה. נסו להתחיל שוב.']);
+            }
+
             $run = $profile->quizRuns()->create(['game' => SelectQuizQuestions::GAME]);
 
             foreach ($versions as $position => $version) {
@@ -38,6 +51,6 @@ class StartQuizRun
             }
 
             return $run;
-        });
+        }, attempts: 3);
     }
 }

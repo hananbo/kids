@@ -12,7 +12,7 @@ class AdvanceQuizRun
         DB::transaction(function () use ($run, $questionId): void {
             $run = QuizRun::query()->lockForUpdate()->findOrFail($run->id);
 
-            if ($run->completed_at) {
+            if (! $run->isActive()) {
                 return;
             }
 

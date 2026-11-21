@@ -20,6 +20,7 @@ type Props = {
         position: number;
         total: number;
         completed: boolean;
+        cancelled: boolean;
         score: number | null;
     } | null;
     question: {
@@ -168,6 +169,11 @@ export default function HebrewQuiz({ team, player, run, question }: Props) {
                                 <h2 className="text-2xl font-semibold">
                                     שלום, <bdi>{player}</bdi>!
                                 </h2>
+                            )}
+                            {run?.cancelled && (
+                                <p role="status">
+                                    החידון הופסק כי אחת השאלות הוסרה.
+                                </p>
                             )}
                             <Button
                                 data-test="start-run"

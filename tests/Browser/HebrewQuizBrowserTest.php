@@ -56,6 +56,11 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
         ->click('לווייתן')
         ->assertSee('השמש מאירה את היום.')
         ->assertSee('התשובה הנכונה')
+        ->refresh()
+        ->assertSee('שאלה 1 מתוך 8')
+        ->assertSee('מה רואים ביום בשמיים?')
+        ->assertSee('השמש מאירה את היום.')
+        ->assertPresent('[data-test="advance"]')
         ->assertNoJavaScriptErrors();
 
     $child = ChildProfile::query()->whereBelongsTo($parent->currentTeam)->where('name', 'נועה')->sole();
