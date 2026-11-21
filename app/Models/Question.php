@@ -16,21 +16,27 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $team_id
  * @property array<string, mixed> $content
  * @property int $difficulty
+ * @property int $target_age
+ * @property list<string>|null $subjects
  * @property bool $quiz_eligible
  * @property-read Team $team
  * @property-read PublishedQuestionVersion|null $publishedVersion
  */
-#[Fillable(['team_id', 'content', 'difficulty', 'quiz_eligible'])]
+#[Fillable(['team_id', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible'])]
 class Question extends Model
 {
     /** @use HasFactory<QuestionFactory> */
     use HasFactory;
+
+    protected $attributes = ['target_age' => 6];
 
     protected function casts(): array
     {
         return [
             'content' => 'array',
             'difficulty' => 'integer',
+            'target_age' => 'integer',
+            'subjects' => 'array',
             'quiz_eligible' => 'boolean',
         ];
     }
@@ -57,6 +63,6 @@ class Question extends Model
 
     public function draftRevision(): string
     {
-        return hash('sha256', serialize([$this->content, $this->difficulty, $this->quiz_eligible]));
+        return hash('sha256', serialize([$this->content, $this->difficulty, $this->target_age, $this->subjects, $this->quiz_eligible]));
     }
 }

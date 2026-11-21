@@ -11,6 +11,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -64,6 +65,10 @@ class QuestionSchema
                 ->defaultItems(0)
                 ->disabled($readOnly)
                 ->addActionLabel('הוספת מקור'),
+            TagsInput::make('subjects')
+                ->label('נושאים')->nestedRecursiveRules(['required', 'string', 'max:60'])->disabled($readOnly),
+            TextInput::make('target_age')
+                ->label('גיל יעד')->integer()->minValue(1)->maxValue(18)->default(6)->required()->disabled($readOnly),
             TextInput::make('difficulty')
                 ->label('רמת קושי')->integer()->minValue(1)->maxValue(10)->default(1)->required()->disabled($readOnly),
             Toggle::make('quiz_eligible')

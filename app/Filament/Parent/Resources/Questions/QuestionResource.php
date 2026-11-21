@@ -71,6 +71,8 @@ class QuestionResource extends Resource
                         'revision' => $record->draftRevision(),
                         'content' => QuestionContent::normalize($record->content),
                         'difficulty' => $record->difficulty,
+                        'target_age' => $record->target_age,
+                        'subjects' => $record->subjects,
                         'quiz_eligible' => $record->quiz_eligible,
                     ])
                     ->schema([Hidden::make('revision'), ...QuestionSchema::fields(readOnly: true)])

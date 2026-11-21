@@ -4,11 +4,15 @@ namespace App\Filament\Parent\Resources\ChildProfiles;
 
 use App\Actions\ChildProfiles\SelectChildProfile;
 use App\Filament\Parent\Resources\ChildProfiles\Pages\ManageChildProfiles;
+use App\Games\HebrewQuiz\SelectQuizQuestions;
 use App\Models\ChildProfile;
+use App\Models\Question;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -38,6 +42,17 @@ class ChildProfileResource extends Resource
         return $schema->components([
             TextInput::make('name')->label('שם')->required()->maxLength(255)
                 ->extraInputAttributes(['data-test' => 'child-name']),
+            TextInput::make('learning_age')->label('גיל למידה')->integer()->minValue(1)->maxValue(18)->default(6)->required()
+                ->extraInputAttributes(['data-test' => 'learning-age']),
+            Select::make('starting_level')->label('רמת התחלה')->options([1 => '1', 2 => '2', 3 => '3'])->default(1)->required()
+                ->extraInputAttributes(['data-test' => 'starting-level']),
+            TagsInput::make('subjects')->label('נושאים')
+                ->helperText('כשהרשימה ריקה, אפשר לשחק בכל הנושאים.')
+                ->suggestions(fn (): array => Question::query()
+                    ->where('team_id', Filament::auth()->user()?->current_team_id)
+                    ->pluck('subjects')->flatten()->filter()->unique()->sort()->values()->all())
+                ->nestedRecursiveRules(['required', 'string', 'max:60'])
+                ->extraInputAttributes(['data-test' => 'child-subjects']),
         ]);
     }
 
@@ -55,7 +70,22 @@ class ChildProfileResource extends Resource
 
                         return redirect()->route('quiz.play.show', ['current_team' => $record->team]);
                     }),
-                EditAction::make(),
+                EditAction::make()
+                    ->extraAttributes(['data-test' => 'edit-child'])
+                    ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-child'])),
+                Action::make('inspectPool')
+                    ->label('מצב מאגר השאלות')
+                    ->icon(Heroicon::OutlinedClipboardDocumentList)
+                    ->extraAttributes(['data-test' => 'inspect-pool'])
+                    ->modalHeading('מצב מאגר השאלות')
+                    ->modalDescription(function (ChildProfile $record, SelectQuizQuestions $selectQuestions): string {
+                        $shortages = $selectQuestions->poolShortages($record);
+
+                        return $shortages === []
+                            ? 'יש מספיק שאלות מאושרות לפתיחת משחק ברמת ההתחלה.'
+                            : implode(' ', $shortages);
+                    })
+                    ->modalSubmitAction(false),
             ]);
     }
 
