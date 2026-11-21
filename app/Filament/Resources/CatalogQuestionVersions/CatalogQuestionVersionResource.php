@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\CatalogQuestionVersions;
 
-use App\Actions\Catalog\ShareQuestionVersion;
+use App\Actions\Catalog\ShareCatalogVersion;
 use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Filament\Resources\CatalogQuestionVersions\Pages\ListCatalogQuestionVersions;
 use App\Filament\Schemas\QuestionSchema;
@@ -61,7 +61,7 @@ class CatalogQuestionVersionResource extends Resource
                         mediaUrl: fn (Model $record, string $field): string => route('admin.catalog-versions.media', ['version' => $record, 'field' => $field]),
                     ))
                     ->successNotificationTitle('Question version shared')
-                    ->action(function (PublishedQuestionVersion $record, Action $action, ShareQuestionVersion $share): void {
+                    ->action(function (PublishedQuestionVersion $record, Action $action, ShareCatalogVersion $share): void {
                         $share($record);
                         $action->success();
                     }),

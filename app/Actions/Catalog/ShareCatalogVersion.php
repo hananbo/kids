@@ -3,17 +3,18 @@
 namespace App\Actions\Catalog;
 
 use App\Models\PublishedQuestionVersion;
+use App\Models\PublishedWordEntryVersion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
-class ShareQuestionVersion
+class ShareCatalogVersion
 {
-    public function __invoke(PublishedQuestionVersion $version): void
+    public function __invoke(PublishedQuestionVersion|PublishedWordEntryVersion $version): void
     {
         Gate::authorize('manage-shared-catalog');
 
         DB::transaction(function () use ($version): void {
-            $version = PublishedQuestionVersion::query()
+            $version = $version->newQuery()
                 ->whereNull('withdrawn_at')
                 ->whereNull('shared_from_version_id')
                 ->lockForUpdate()

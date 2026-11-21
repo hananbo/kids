@@ -2,8 +2,8 @@
 
 namespace App\Filament\Parent\Resources\Questions;
 
-use App\Actions\Catalog\PublishQuestion;
-use App\Actions\Catalog\SaveQuestionLocalization;
+use App\Actions\Catalog\PublishCatalogVersion;
+use App\Actions\Catalog\SaveCatalogLocalization;
 use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Filament\Parent\Resources\Questions\Pages\ManageQuestions;
 use App\Filament\Schemas\QuestionSchema;
@@ -150,7 +150,7 @@ class QuestionResource extends Resource
             ])
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-localization']))
             ->successNotificationTitle('טיוטת התרגום נשמרה')
-            ->action(function (Question $record, array $data, Action $action, SaveQuestionLocalization $save): void {
+            ->action(function (Question $record, array $data, Action $action, SaveCatalogLocalization $save): void {
                 $save($record, $data['locale'], $data['content'] ?? []);
                 $action->success();
             });
@@ -200,7 +200,7 @@ class QuestionResource extends Resource
             ])
             ->modalSubmitAction(fn (Action $action): Action => $action->label('פרסום')->extraAttributes(['data-test' => 'publish-question-submit']))
             ->successNotificationTitle('השאלה פורסמה')
-            ->action(function (Question $record, array $data, Action $action, PublishQuestion $publish) use ($localized): void {
+            ->action(function (Question $record, array $data, Action $action, PublishCatalogVersion $publish) use ($localized): void {
                 try {
                     $publish($record, $data['revision'], $localized ? $data['locale'] : CatalogLocale::BASE);
                 } catch (ValidationException $exception) {

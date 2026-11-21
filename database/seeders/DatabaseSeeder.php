@@ -21,5 +21,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->callWith(HebrewQuizSeeder::class, ['team' => $parent->currentTeam]);
+        $this->callWith(WordEntrySeeder::class, ['team' => $parent->currentTeam]);
     }
 }

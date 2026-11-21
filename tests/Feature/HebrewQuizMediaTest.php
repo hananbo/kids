@@ -1,8 +1,8 @@
 <?php
 
 use App\Actions\Catalog\CopySharedQuestion;
-use App\Actions\Catalog\PublishQuestion;
-use App\Actions\Catalog\ShareQuestionVersion;
+use App\Actions\Catalog\PublishCatalogVersion;
+use App\Actions\Catalog\ShareCatalogVersion;
 use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Models\ChildProfile;
 use App\Models\Question;
@@ -35,7 +35,7 @@ test('media requests resolve the active pinned version and exclude drafts and wi
     $question->update(['content' => $content]);
 
     $this->actingAs($parent);
-    $version = app(PublishQuestion::class)($question, $question->draftRevision());
+    $version = app(PublishCatalogVersion::class)($question, $question->draftRevision());
     $question->update(['content' => [...$content, 'prompt' => ['type' => 'audio', 'path' => $draftPath, 'alternative' => 'טיוטה']]]);
 
     $reviewMedia = route('parent.questions.media', ['question' => $question, 'field' => 'prompt']);
@@ -94,7 +94,7 @@ test('a parent cannot publish an unrelated household file or active content disg
             'prompt' => ['type' => 'audio', 'path' => $path, 'alternative' => 'טון קצר'],
         ]]);
 
-        expect(fn () => app(PublishQuestion::class)($question, $question->draftRevision()))
+        expect(fn () => app(PublishCatalogVersion::class)($question, $question->draftRevision()))
             ->toThrow(ValidationException::class);
     }
 
@@ -118,15 +118,15 @@ test('a shared catalog approval previews exact media and a private adaptation ca
     ]]);
 
     $this->actingAs($contributor);
-    $version = app(PublishQuestion::class)($question, $question->draftRevision());
+    $version = app(PublishCatalogVersion::class)($question, $question->draftRevision());
     $adminPreview = route('admin.catalog-versions.media', ['version' => $version, 'field' => 'prompt']);
     $this->get($adminPreview)->assertForbidden();
     $this->actingAs($admin)->get($adminPreview)->assertOk()->assertHeader('Content-Disposition', 'inline');
-    app(ShareQuestionVersion::class)($version);
+    app(ShareCatalogVersion::class)($version);
 
     $this->actingAs($parent);
     $copy = app(CopySharedQuestion::class)($question, $team);
-    $copyVersion = app(PublishQuestion::class)($copy, $copy->draftRevision());
+    $copyVersion = app(PublishCatalogVersion::class)($copy, $copy->draftRevision());
 
     $this->withSession(['child_mode' => ['profile_id' => $child->id, 'team_id' => $team->id]])
         ->post(route('quiz.play.start', $team))->assertRedirect(route('quiz.play.show', $team));
