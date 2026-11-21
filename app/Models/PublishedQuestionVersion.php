@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, string> $content
  * @property int $difficulty
  * @property bool $quiz_eligible
+ * @property Carbon|null $withdrawn_at
  */
 #[Fillable(['question_id', 'locale', 'content', 'difficulty', 'quiz_eligible', 'approved_by'])]
 class PublishedQuestionVersion extends Model
@@ -28,6 +30,7 @@ class PublishedQuestionVersion extends Model
             'content' => 'array',
             'difficulty' => 'integer',
             'quiz_eligible' => 'boolean',
+            'withdrawn_at' => 'datetime',
         ];
     }
 

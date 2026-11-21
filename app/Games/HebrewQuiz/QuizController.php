@@ -19,7 +19,7 @@ class QuizController
         $profile = $this->profile($request, $current_team);
         $run = $this->runs($profile)->latest('id')->first();
 
-        $question = $run && ! $run->completed_at
+        $question = $run?->isActive()
             ? $run->questions()->with('version')->where('position', $run->position)->firstOrFail()
             : null;
 
@@ -33,6 +33,7 @@ class QuizController
                 'position' => $run->position + 1,
                 'total' => $run->questions()->count(),
                 'completed' => $run->completed_at !== null,
+                'cancelled' => $run->cancelled_at !== null,
                 'score' => $run->completed_at ? $run->questions()->where('is_correct', true)->count() : null,
             ] : null,
             'question' => $question && $content ? [

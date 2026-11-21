@@ -3,7 +3,9 @@
 namespace App\Filament\Parent\Resources\Questions;
 
 use App\Actions\Catalog\PublishQuestion;
+use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Filament\Parent\Resources\Questions\Pages\ManageQuestions;
+use App\Models\PublishedQuestionVersion;
 use App\Models\Question;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -11,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -46,6 +49,9 @@ class QuestionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->withExists([
+                'versions as has_withdrawable_versions' => fn (Builder $versions): Builder => $versions->whereNull('withdrawn_at'),
+            ]))
             ->columns([
                 TextColumn::make('content.prompt')->label('שאלה')->wrap(),
                 TextColumn::make('difficulty')->label('קושי'),
@@ -78,6 +84,30 @@ class QuestionResource extends Resource
                             $action->halt();
                         }
 
+                        $action->success();
+                    }),
+                Action::make('withdraw')
+                    ->label('הסרת גרסה מהמשחק')
+                    ->color('danger')
+                    ->visible(fn (Question $record): bool => (bool) $record->getAttribute('has_withdrawable_versions'))
+                    ->requiresConfirmation()
+                    ->modalDescription('הסרת גרסה תפסיק חידונים פעילים שבהם היא מופיעה.')
+                    ->schema([
+                        Select::make('version')
+                            ->label('גרסה שפורסמה')
+                            ->options(fn (Question $record): array => $record->versions()
+                                ->whereNull('withdrawn_at')
+                                ->latest('id')
+                                ->get()
+                                ->mapWithKeys(fn (PublishedQuestionVersion $version): array => [
+                                    $version->id => "#{$version->id} · {$version->locale} · {$version->created_at?->format('Y-m-d H:i')}",
+                                ])
+                                ->all())
+                            ->required(),
+                    ])
+                    ->successNotificationTitle('הגרסה הוסרה מהמשחק')
+                    ->action(function (Question $record, array $data, Action $action, WithdrawQuestionVersion $withdraw): void {
+                        $withdraw($record, (int) $data['version']);
                         $action->success();
                     }),
             ]);

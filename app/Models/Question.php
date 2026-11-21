@@ -51,7 +51,8 @@ class Question extends Model
     public function publishedVersion(): HasOne
     {
         return $this->hasOne(PublishedQuestionVersion::class)
-            ->ofMany(['id' => 'max'], fn (Builder $query) => $query->where('locale', 'he'));
+            ->ofMany(['id' => 'max'], fn (Builder $query) => $query->where('locale', 'he'))
+            ->whereNull('published_question_versions.withdrawn_at');
     }
 
     public function draftRevision(): string
