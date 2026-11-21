@@ -65,7 +65,7 @@ class QuestionContent
         $content = self::normalize($content);
         $rules = [
             'explanation' => ['required', 'string', 'max:2000'],
-            'hint' => ['nullable', 'string', 'max:500'],
+            'hint' => ['nullable', 'string', 'max:1000'],
             'sources' => ['sometimes', 'array', 'list', 'max:10'],
             'sources.*' => ['required', 'string', 'url:http,https', 'max:2048'],
         ];

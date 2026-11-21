@@ -48,6 +48,9 @@ class QuestionSchema
             Textarea::make('content.explanation')
                 ->label('הסבר')->required()->maxLength(2000)->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => 'draft-explanation']),
+            Textarea::make('content.hint')
+                ->label('רמז')->maxLength(1000)->disabled($readOnly)
+                ->extraInputAttributes(['data-test' => 'draft-hint']),
             Repeater::make('content.sources')
                 ->label('מקורות')
                 ->simple(TextInput::make('url')

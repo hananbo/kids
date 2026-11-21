@@ -15,6 +15,8 @@ use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -41,7 +43,13 @@ class QuestionResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components(QuestionSchema::fields());
+        return $schema->components([
+            ...QuestionSchema::fields(),
+            Textarea::make('generation_media_suggestion')
+                ->label('הצעת מדיה מההעשרה')
+                ->maxLength(1000)
+                ->visible(fn (?Question $record): bool => $record?->question_generation_batch_id !== null),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -59,14 +67,18 @@ class QuestionResource extends Resource
             ->recordActions([
                 EditAction::make()
                     ->iconButton()
-                    ->mutateRecordDataUsing(fn (array $data): array => ['content' => QuestionContent::normalize($data['content'])] + $data),
+                    ->mutateRecordDataUsing(fn (array $data): array => ['content' => QuestionContent::normalize($data['content'])] + $data)
+                    ->extraAttributes(['data-test' => 'edit-question'])
+                    ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-question'])),
                 Action::make('publish')
                     ->label('סקירה ופרסום')
                     ->iconButton()
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->extraAttributes(['data-test' => 'review-question'])
                     ->modalHeading('אישור השאלה לפרסום')
-                    ->modalDescription('בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
+                    ->modalDescription(fn (Question $record): string => $record->question_generation_batch_id === null
+                        ? 'בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.'
+                        : 'בהכנה לפרסום. בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
                     ->fillForm(fn (Question $record): array => [
                         'revision' => $record->draftRevision(),
                         'content' => QuestionContent::normalize($record->content),
@@ -75,7 +87,13 @@ class QuestionResource extends Resource
                         'subjects' => $record->subjects,
                         'quiz_eligible' => $record->quiz_eligible,
                     ])
-                    ->schema([Hidden::make('revision'), ...QuestionSchema::fields(readOnly: true)])
+                    ->schema([
+                        Hidden::make('revision'),
+                        ...QuestionSchema::fields(readOnly: true),
+                        TextEntry::make('generation_media_suggestion')
+                            ->label('הצעת מדיה מההעשרה')
+                            ->visible(fn (Question $record): bool => filled($record->generation_media_suggestion)),
+                    ])
                     ->modalSubmitAction(fn (Action $action): Action => $action->label('פרסום')->extraAttributes(['data-test' => 'publish-question-submit']))
                     ->successNotificationTitle('השאלה פורסמה')
                     ->action(function (Question $record, array $data, Action $action, PublishQuestion $publish): void {

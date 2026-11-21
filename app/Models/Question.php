@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * @property int $id
  * @property int $team_id
+ * @property int|null $question_generation_batch_id
+ * @property string|null $generation_media_suggestion
  * @property array<string, mixed> $content
  * @property int $difficulty
  * @property int $target_age
@@ -22,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read Team $team
  * @property-read PublishedQuestionVersion|null $publishedVersion
  */
-#[Fillable(['team_id', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible'])]
+#[Fillable(['team_id', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible', 'generation_media_suggestion'])]
 class Question extends Model
 {
     /** @use HasFactory<QuestionFactory> */
