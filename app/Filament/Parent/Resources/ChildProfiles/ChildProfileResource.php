@@ -4,7 +4,7 @@ namespace App\Filament\Parent\Resources\ChildProfiles;
 
 use App\Actions\ChildProfiles\SelectChildProfile;
 use App\Filament\Parent\Resources\ChildProfiles\Pages\ManageChildProfiles;
-use App\Games\HebrewQuiz\SelectQuizQuestions;
+use App\Games\GamePackages;
 use App\Models\ChildProfile;
 use App\Models\Question;
 use BackedEnum;
@@ -19,6 +19,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 
@@ -58,34 +59,40 @@ class ChildProfileResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $packages = app(GamePackages::class)->all();
+        $play = [];
+        $inspect = [];
+        $multiple = count($packages) > 1;
+
+        foreach ($packages as $package) {
+            $suffix = $multiple ? '-'.$package->key : '';
+            $play[] = Action::make('play'.$suffix)
+                ->label($multiple ? $package->name : 'משחק')
+                ->icon(Heroicon::OutlinedPlay)
+                ->extraAttributes(['data-test' => 'select-child'.$suffix])
+                ->action(function (ChildProfile $record, SelectChildProfile $select, Session $session) use ($package): RedirectResponse {
+                    $destination = route($package->entryRoute, ['current_team' => $record->team]);
+                    $select($record, $session);
+
+                    return redirect($destination);
+                });
+            $inspect[] = Action::make('inspectPool'.$suffix)
+                ->label($multiple ? $package->name.' · '.$package->poolLabel : $package->poolLabel)
+                ->icon(Heroicon::OutlinedClipboardDocumentList)
+                ->extraAttributes(['data-test' => 'inspect-pool'.$suffix])
+                ->modalHeading($package->poolLabel)
+                ->modalDescription(fn (ChildProfile $record): string => ($package->poolStatus)($record))
+                ->modalSubmitAction(false);
+        }
+
         return $table
             ->columns([TextColumn::make('name')->label('שם')])
             ->recordActions([
-                Action::make('play')
-                    ->label('משחק')
-                    ->icon(Heroicon::OutlinedPlay)
-                    ->extraAttributes(['data-test' => 'select-child'])
-                    ->action(function (ChildProfile $record, SelectChildProfile $select): RedirectResponse {
-                        $select($record, request()->session());
-
-                        return redirect()->route('quiz.play.show', ['current_team' => $record->team]);
-                    }),
+                ...$play,
                 EditAction::make()
                     ->extraAttributes(['data-test' => 'edit-child'])
                     ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-child'])),
-                Action::make('inspectPool')
-                    ->label('מצב מאגר השאלות')
-                    ->icon(Heroicon::OutlinedClipboardDocumentList)
-                    ->extraAttributes(['data-test' => 'inspect-pool'])
-                    ->modalHeading('מצב מאגר השאלות')
-                    ->modalDescription(function (ChildProfile $record, SelectQuizQuestions $selectQuestions): string {
-                        $shortages = $selectQuestions->poolShortages($record);
-
-                        return $shortages === []
-                            ? 'יש מספיק שאלות מאושרות לפתיחת משחק ברמה הזמינה.'
-                            : implode(' ', $shortages);
-                    })
-                    ->modalSubmitAction(false),
+                ...$inspect,
             ]);
     }
 

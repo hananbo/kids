@@ -13,17 +13,29 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Ai\Responses\StructuredAgentResponse;
+use Spatie\QueueableAction\QueueableAction;
 use Throwable;
 use UnexpectedValueException;
 
 class GenerateQuestionBatch
 {
+    use QueueableAction;
+
+    public int $tries = 1;
+
+    public int $timeout = 55;
+
     private const QUESTION_FIELDS = ['prompt', 'correct_answer', 'distractor_one', 'distractor_two', 'distractor_three'];
 
     public function __construct(
         private AssessHebrewQuestions $assess,
         private EnrichHebrewQuestions $enrich,
     ) {}
+
+    public function dispatchAfterCommit(int $batchId): void
+    {
+        $this->onQueue()->execute($batchId)->afterCommit(); // @phpstan-ignore method.notFound (Spatie 2.17.1 gives onQueue the wrong return type for its dispatch proxy.)
+    }
 
     public function __invoke(int $batchId): void
     {

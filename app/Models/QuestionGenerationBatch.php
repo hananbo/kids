@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int $team_id
  * @property string $topic
  * @property int $question_count
+ * @property-read int $published_questions_count
  * @property string $stage
  * @property Carbon|null $failed_at
  * @property-read Team $team

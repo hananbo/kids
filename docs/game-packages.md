@@ -10,11 +10,17 @@ The platform installs standalone packages at deploy time. Filament controls whet
 4. Respect the publishing and availability decisions. Edits keep the last approved version playable. Runs keep the versions selected at their start. Withdrawal ends active runs using a withdrawn version. Disabling a game allows active runs to finish and preserves progress.
 5. Verify the full flow in an end-to-end test. Publish valid content in Filament, play it in Hebrew RTL at a phone viewport, submit an answer, and check progress on the selected child profile. Exercise missing translations, unapproved content, and game availability as failure paths.
 
+## Register a game
+
+Add the package provider to \`bootstrap/providers.php\`. In its \`register()\` method, bind a \`GamePackage\` descriptor and tag the binding with \`GamePackage::class\`. The descriptor supplies the stable game key, display name, child entry route, and a pool status callback for the selected Child Profile. The parent panel builds the play and readiness actions from registered packages with a valid entry route.
+
+In the provider’s \`boot()\` method, mount the game’s named routes under \`{current_team}\` with \`web\`, \`auth\`, \`verified\`, and \`EnsureChildPlay\`. Use the bound \`Team $current_team\` and \`EnsureChildPlay::profile($request)\` to access the authorized play context. Use the same game key for the availability row, catalog rules, and progress records. Include a migration for a new game’s availability row.
+
 ## Hebrew quiz installation
 
-The application registers `HebrewQuizServiceProvider` in `bootstrap/providers.php`. The provider mounts the authenticated play routes, and `resources/js/pages/games/hebrew-quiz.tsx` renders the game. Run migrations and build frontend assets as part of deployment. The game availability migration registers the stable `hebrew-quiz` key. Use the same key in the installed package, its catalog selection, and its progress records.
+\`HebrewQuizServiceProvider\` registers the \`hebrew-quiz\` package and its \`quiz:seed\` command. Its play screen is \`resources/js/pages/games/hebrew-quiz.tsx\` and uses Wayfinder’s generated quiz routes. Run migrations and build frontend assets as part of deployment. If removing the quiz, remove its provider registration and its Wayfinder-dependent page from the build together. Rebuild route and frontend caches. The host omits play and readiness actions for an uninstalled package and retains recorded progress.
 
-For an existing household, run `php artisan quiz:seed <household-slug>`. This seeds 48 approved Hebrew General Knowledge questions with a target age of six, enough for two distinct runs at each starting level. Subject selections outside General Knowledge need their own eligible questions. A parent can check pool shortages for each child in Filament.
+For an existing household, run \`php artisan quiz:seed <household-slug>\`. This seeds 96 approved Hebrew General Knowledge questions. The target-age-one band uses familiar objects, sounds, routines, and early counting, and a parent can read it aloud. The target-age-six band adds more advanced topics. Each band supplies two distinct runs at each starting level. Profiles that select other subjects need their own eligible questions. Use the parent panel to check each child’s pool.
 
 ## Availability and play
 

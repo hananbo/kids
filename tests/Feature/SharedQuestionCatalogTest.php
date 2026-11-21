@@ -1,5 +1,10 @@
 <?php
 
+use App\Actions\Catalog\CopySharedQuestion;
+use App\Actions\Catalog\PlayableQuestionVersions;
+use App\Actions\Catalog\PublishCatalogVersion;
+use App\Actions\Catalog\SaveCatalogLocalization;
+use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Filament\Parent\Resources\Questions\Pages\ManageQuestions;
 use App\Filament\Parent\Resources\SharedQuestions\Pages\ListSharedQuestions;
 use App\Filament\Resources\CatalogQuestionVersions\Pages\ListCatalogQuestionVersions;
@@ -11,6 +16,7 @@ use App\Support\Catalog\QuestionContent;
 use Database\Seeders\HebrewQuizSeeder;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
+use Illuminate\Database\Eloquent\Builder;
 use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
 
@@ -177,4 +183,50 @@ test('only platform withdrawal ends runs pinned to a Shared Catalog version', fu
             ->where('question', null)
             ->etc()
         );
+});
+
+test('a private replacement suppresses and restores only its approved locale', function () {
+    $contributor = User::factory()->create();
+    $parent = User::factory()->create();
+    $source = Question::factory()->for($contributor->currentTeam)->create();
+    foreach (['he', 'en'] as $locale) {
+        $private = PublishedQuestionVersion::factory()->for($source)->create(['locale' => $locale]);
+        PublishedQuestionVersion::factory()->for($source)->create([
+            'locale' => $locale,
+            'shared_from_version_id' => $private->id,
+        ]);
+    }
+
+    $team = $parent->currentTeam;
+    $this->actingAs($parent);
+    Filament::setCurrentPanel(Filament::getPanel('parent'));
+    $replacement = app(CopySharedQuestion::class)($source, $team);
+    app(SaveCatalogLocalization::class)($replacement, 'en', [
+        ...$replacement->content,
+        'prompt' => 'Which color belongs here?',
+    ]);
+    $replacement->refresh();
+
+    $publish = app(PublishCatalogVersion::class);
+    $publish($replacement, $replacement->draftRevision('en'), 'en');
+    $pool = fn (string $locale) => app(PlayableQuestionVersions::class)(
+        $team->id, fn (Builder $query) => $query->where('quiz_eligible', true), $locale,
+    )->sole();
+
+    expect($pool('he')->question_id)->toBe($source->id)
+        ->and($pool('en')->question_id)->toBe($replacement->id);
+
+    $hebrewCopy = $publish($replacement, $replacement->draftRevision());
+    expect($pool('he')->question_id)->toBe($replacement->id);
+    app(WithdrawQuestionVersion::class)($replacement, $hebrewCopy->id);
+    expect(app(PlayableQuestionVersions::class)(
+        $team->id, fn (Builder $query) => $query->where('quiz_eligible', true),
+    ))->toBeEmpty();
+
+    Livewire::test(ListSharedQuestions::class)
+        ->callAction(TestAction::make('restore')->table($source))
+        ->assertNotified('השאלה המקורית חזרה למאגר');
+
+    expect($pool('he')->question_id)->toBe($source->id)
+        ->and($pool('en')->question_id)->toBe($replacement->id);
 });

@@ -2,8 +2,8 @@
 
 namespace App\Filament\Parent\Resources\QuestionGenerationBatches\Pages;
 
+use App\Actions\Catalog\GenerateQuestionBatch;
 use App\Filament\Parent\Resources\QuestionGenerationBatches\QuestionGenerationBatchResource;
-use App\Jobs\ProcessQuestionGenerationBatch;
 use App\Models\QuestionGenerationBatch;
 use App\Models\Team;
 use Filament\Actions\Action;
@@ -38,7 +38,7 @@ class ManageQuestionGenerationBatches extends ManageRecords
                         ->extraInputAttributes(['data-test' => 'generation-count']),
                 ])
                 ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'submit-question-batch']))
-                ->action(function (array $data): void {
+                ->action(function (array $data, GenerateQuestionBatch $generate): void {
                     $team = Filament::auth()->user()?->currentTeam;
                     abort_unless($team instanceof Team, 403);
                     Gate::authorize('update', $team);
@@ -49,7 +49,7 @@ class ManageQuestionGenerationBatches extends ManageRecords
                         'question_count' => $data['question_count'],
                     ]);
 
-                    ProcessQuestionGenerationBatch::dispatch($batch->id)->afterCommit();
+                    $generate->dispatchAfterCommit($batch->id);
                 }),
         ];
     }

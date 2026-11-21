@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Games\GamePackages;
 use Database\Factories\GameFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -29,6 +32,13 @@ class Game extends Model
     public function households(): BelongsToMany
     {
         return $this->belongsToMany(Team::class)->withPivot('enabled');
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function installed(Builder $query): void
+    {
+        $query->whereIn('key', array_keys(app(GamePackages::class)->all()));
     }
 
     public static function allowsStart(string $key, int $teamId, bool $lock = false): bool

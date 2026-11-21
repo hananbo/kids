@@ -111,13 +111,14 @@ test('quiz cannot start when a reviewed difficulty group is short', function () 
     expect($profile->quizRuns()->count())->toBe(0);
 });
 
-test('launch seed supplies two nonoverlapping runs at the configured starting level', function (int $level) {
+test('launch seed supplies two nonoverlapping runs at the configured starting level and learning age', function (int $level, int $age) {
     $parent = User::factory()->create();
     $team = $parent->currentTeam;
     $anotherHousehold = User::factory()->create()->currentTeam;
     $profile = ChildProfile::factory()->for($team)->create([
         'starting_level' => $level,
         'subjects' => ['ידע כללי'],
+        'learning_age' => $age,
     ]);
 
     $this->artisan('quiz:seed', ['team' => $team->slug])->assertSuccessful();
@@ -141,9 +142,10 @@ test('launch seed supplies two nonoverlapping runs at the configured starting le
     expect($secondRun->questions()->pluck('published_question_version_id')->intersect(
         $firstRun->questions()->pluck('published_question_version_id'),
     ))->toBeEmpty();
-    expect(Question::query()->whereBelongsTo($team)->count())->toBe(48);
+    expect($firstRun->questions()->with('version')->get()->pluck('version.target_age')->max())->toBe($age < 6 ? 1 : 6);
+    expect(Question::query()->whereBelongsTo($team)->count())->toBe(96);
     expect(Question::query()->whereBelongsTo($anotherHousehold)->count())->toBe(0);
-})->with([1, 2, 3]);
+})->with([1, 2, 3])->with([1, 2, 3, 4, 5, 6, 18]);
 
 test('launch seeding requires an existing household', function () {
     $this->artisan('quiz:seed', ['team' => 'missing-household'])

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Parent\Resources\Questions;
 
-use App\Actions\Catalog\PublishCatalogVersion;
 use App\Actions\Catalog\SaveCatalogLocalization;
 use App\Actions\Catalog\WithdrawQuestionVersion;
+use App\Filament\Actions\ReviewCatalogPublication;
 use App\Filament\Parent\Resources\Questions\Pages\ManageQuestions;
 use App\Filament\Schemas\QuestionSchema;
 use App\Models\PublishedQuestionVersion;
@@ -15,12 +15,10 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Utilities\Get;
@@ -30,7 +28,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Validation\ValidationException;
 
 class QuestionResource extends Resource
 {
@@ -158,59 +155,22 @@ class QuestionResource extends Resource
 
     private static function publishAction(bool $localized = false): Action
     {
-        $localeSelect = Select::make('locale')
-            ->label('שפה לפרסום')
-            ->options(fn (Question $record): array => collect(array_keys($record->localizations ?? []))
-                ->mapWithKeys(fn (string $locale): array => [$locale => $locale])->all())
-            ->required()
-            ->live()
-            ->extraInputAttributes(['data-test' => 'review-locale'])
-            ->afterStateUpdated(function (?string $state, Question $record, Set $set): void {
-                $locale = $state ?? CatalogLocale::BASE;
-                $set('content', $record->localizedDraft($locale));
-                $set('revision', $record->draftRevision($locale));
-            });
-
-        $action = Action::make($localized ? 'publishLocale' : 'publish')
-            ->label($localized ? 'סקירה ופרסום של תרגום' : 'סקירה ופרסום')
-            ->icon(Heroicon::OutlinedCheckCircle)
-            ->visible(fn (Question $record): bool => ! $localized || ! empty($record->localizations))
+        return ReviewCatalogPublication::make(
+            $localized,
+            [
+                ...QuestionSchema::fields(readOnly: true),
+                TextEntry::make('generation_media_suggestion')
+                    ->label('הצעת מדיה מההעשרה')
+                    ->visible(fn (Question $record): bool => filled($record->generation_media_suggestion)),
+            ],
+            ['difficulty', 'target_age', 'subjects', 'quiz_eligible'],
+        )
             ->extraAttributes(['data-test' => $localized ? 'review-localization' : 'review-question'])
             ->modalHeading($localized ? 'אישור הגרסה לפרסום בשפה שנבחרה' : 'אישור השאלה לפרסום')
             ->modalDescription(fn (Question $record): string => $record->question_generation_batch_id === null
                 ? 'בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.'
                 : 'בהכנה לפרסום. בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
-            ->fillForm(function (Question $record) use ($localized): array {
-                $locale = ($localized ? array_key_first($record->localizations ?? []) : null) ?? CatalogLocale::BASE;
-
-                return [
-                    'locale' => $locale,
-                    'revision' => $record->draftRevision($locale),
-                    'content' => $record->localizedDraft($locale),
-                    ...$record->only(['difficulty', 'target_age', 'subjects', 'quiz_eligible']),
-                ];
-            })
-            ->schema([
-                ...($localized ? [$localeSelect] : []),
-                Hidden::make('revision'),
-                ...QuestionSchema::fields(readOnly: true),
-                TextEntry::make('generation_media_suggestion')
-                    ->label('הצעת מדיה מההעשרה')
-                    ->visible(fn (Question $record): bool => filled($record->generation_media_suggestion)),
-            ])
             ->modalSubmitAction(fn (Action $action): Action => $action->label('פרסום')->extraAttributes(['data-test' => 'publish-question-submit']))
-            ->successNotificationTitle('השאלה פורסמה')
-            ->action(function (Question $record, array $data, Action $action, PublishCatalogVersion $publish) use ($localized): void {
-                try {
-                    $publish($record, $data['revision'], $localized ? $data['locale'] : CatalogLocale::BASE);
-                } catch (ValidationException $exception) {
-                    Notification::make()->title($exception->getMessage())->danger()->send();
-                    $action->halt();
-                }
-
-                $action->success();
-            });
-
-        return $localized ? $action : $action->iconButton();
+            ->successNotificationTitle('השאלה פורסמה');
     }
 }

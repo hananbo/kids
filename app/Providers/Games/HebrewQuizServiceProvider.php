@@ -2,22 +2,49 @@
 
 namespace App\Providers\Games;
 
+use App\Games\GamePackage;
 use App\Games\HebrewQuiz\QuizController;
+use App\Games\HebrewQuiz\SeedHebrewQuiz;
+use App\Games\HebrewQuiz\SelectQuizQuestions;
+use App\Http\Middleware\EnsureChildPlay;
 use App\Http\Middleware\SetHebrewLocale;
+use App\Models\ChildProfile;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class HebrewQuizServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $binding = 'game.'.SelectQuizQuestions::GAME;
+
+        $this->app->singleton($binding, fn (): GamePackage => new GamePackage(
+            key: SelectQuizQuestions::GAME,
+            name: 'חידון הניצוצות',
+            entryRoute: 'quiz.play.show',
+            poolLabel: 'מצב מאגר השאלות',
+            poolStatus: function (ChildProfile $profile): string {
+                $shortages = $this->app->make(SelectQuizQuestions::class)->poolShortages($profile);
+
+                return $shortages === []
+                    ? 'יש מספיק שאלות מאושרות לפתיחת משחק ברמה הזמינה.'
+                    : implode(' ', $shortages);
+            },
+        ));
+        $this->app->tag($binding, GamePackage::class);
+    }
+
     public function boot(): void
     {
+        $this->commands([SeedHebrewQuiz::class]);
+
         if ($this->app->routesAreCached()) {
             return;
         }
 
         Route::prefix('{current_team}/quiz')
             ->name('quiz.play.')
-            ->middleware(['web', 'auth', 'verified', SetHebrewLocale::class])
+            ->middleware(['web', 'auth', 'verified', EnsureChildPlay::class, SetHebrewLocale::class])
             ->group(function (): void {
                 Route::get('/', [QuizController::class, 'show'])->name('show');
                 Route::post('/', [QuizController::class, 'start'])->name('start');

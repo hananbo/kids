@@ -20,7 +20,7 @@ class PlayableQuestionVersions
         $available = Question::query()
             ->whereDoesntHave('replacements', fn (Builder $query): Builder => $query
                 ->where('team_id', $teamId)
-                ->where('suppresses_original', true));
+                ->whereJsonContains('suppressed_locales', $locale));
 
         $versions = PublishedQuestionVersion::query()->where('locale', $locale)->tap($eligible);
         $private = (clone $versions)

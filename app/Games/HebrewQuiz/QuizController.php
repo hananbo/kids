@@ -2,6 +2,7 @@
 
 namespace App\Games\HebrewQuiz;
 
+use App\Http\Middleware\EnsureChildPlay;
 use App\Models\ChildProfile;
 use App\Models\Game;
 use App\Models\QuizRun;
@@ -12,7 +13,6 @@ use App\Support\Catalog\QuestionMedia;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -21,7 +21,7 @@ class QuizController
 {
     public function show(Request $request, Team $current_team, QuizProgress $progress): Response
     {
-        $profile = $this->profile($request, $current_team);
+        $profile = EnsureChildPlay::profile($request);
         $run = $this->runs($profile)->latest('id')->first();
 
         $question = $run?->isActive()
@@ -66,14 +66,14 @@ class QuizController
 
     public function start(Request $request, Team $current_team, StartQuizRun $start): RedirectResponse
     {
-        $start($this->profile($request, $current_team));
+        $start(EnsureChildPlay::profile($request));
 
         return redirect()->route('quiz.play.show', $current_team);
     }
 
     public function answer(Request $request, Team $current_team, int $run, RecordQuizAnswer $answer): RedirectResponse
     {
-        $selectedRun = $this->runs($this->profile($request, $current_team))->findOrFail($run);
+        $selectedRun = $this->runs(EnsureChildPlay::profile($request))->findOrFail($run);
         $input = $request->validate(['question' => ['required', 'integer'], 'choice' => ['required', 'integer', 'between:0,3']]);
 
         $answer($selectedRun, (int) $input['question'], (int) $input['choice']);
@@ -83,7 +83,7 @@ class QuizController
 
     public function hint(Request $request, Team $current_team, int $run, RevealQuizHint $revealHint): RedirectResponse
     {
-        $selectedRun = $this->runs($this->profile($request, $current_team))->findOrFail($run);
+        $selectedRun = $this->runs(EnsureChildPlay::profile($request))->findOrFail($run);
         $input = $request->validate(['question' => ['required', 'integer']]);
 
         $revealHint($selectedRun, (int) $input['question']);
@@ -93,7 +93,7 @@ class QuizController
 
     public function advance(Request $request, Team $current_team, int $run, AdvanceQuizRun $advance): RedirectResponse
     {
-        $selectedRun = $this->runs($this->profile($request, $current_team))->findOrFail($run);
+        $selectedRun = $this->runs(EnsureChildPlay::profile($request))->findOrFail($run);
         $input = $request->validate(['question' => ['required', 'integer']]);
 
         $advance($selectedRun, (int) $input['question']);
@@ -103,7 +103,7 @@ class QuizController
 
     public function media(Request $request, Team $current_team, int $run, int $question, string $slot): BinaryFileResponse
     {
-        $activeRun = $this->runs($this->profile($request, $current_team))->active()->findOrFail($run);
+        $activeRun = $this->runs(EnsureChildPlay::profile($request))->active()->findOrFail($run);
         $attempt = $activeRun->questions()->with('version')->where('position', $activeRun->position)->findOrFail($question);
         abort_if($attempt->version->withdrawn_at !== null, 404);
 
@@ -137,18 +137,6 @@ class QuizController
         $key = $slot === 'prompt' ? 'prompt' : $attempt->choice_order[(int) $slot];
 
         return QuestionContent::field($attempt->version->content[$key] ?? null);
-    }
-
-    private function profile(Request $request, Team $team): ChildProfile
-    {
-        abort_unless($request->session()->get('child_mode.team_id') === $team->id, 403);
-        $profileId = $request->session()->get('child_mode.profile_id');
-        abort_unless(is_int($profileId), 403);
-        Gate::authorize('update', $team);
-
-        return ChildProfile::query()
-            ->whereBelongsTo($team)
-            ->findOrFail($profileId);
     }
 
     /** @return HasMany<QuizRun, ChildProfile> */

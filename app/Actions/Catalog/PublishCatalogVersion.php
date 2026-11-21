@@ -47,8 +47,9 @@ class PublishCatalogVersion
                 'approved_by' => auth()->id(),
             ]);
 
-            if ($draft instanceof Question && $draft->replaces_question_id !== null && ! $draft->suppresses_original) {
-                $draft->forceFill(['suppresses_original' => true])->save();
+            if ($draft instanceof Question && $draft->replaces_question_id !== null
+                && ! in_array($locale, $draft->suppressed_locales ?? [], true)) {
+                $draft->forceFill(['suppressed_locales' => [...($draft->suppressed_locales ?? []), $locale]])->save();
             }
 
             return $version;

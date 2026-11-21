@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\Catalog\QuestionContent;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -35,7 +36,7 @@ class SharedQuestionResource extends Resource
             ->withWhereHas('sharedVersion')
             ->with(['replacements' => fn (Relation $replacements): Relation => $replacements
                 ->where('team_id', $teamId)
-                ->withExists('livePrivateVersions')]);
+                ->with('livePrivateVersions:id,question_id,locale')]);
     }
 
     public static function table(Table $table): Table
@@ -59,15 +60,17 @@ class SharedQuestionResource extends Resource
                     }),
                 Action::make('restore')
                     ->label('החזרת השאלה המקורית')
-                    ->visible(function (Question $record): bool {
-                        $replacement = $record->replacements->first();
-
-                        return $replacement?->suppresses_original && ! $replacement->getAttribute('live_private_versions_exists');
-                    })
+                    ->visible(fn (Question $record): bool => self::restorableLocales($record) !== [])
                     ->requiresConfirmation()
+                    ->schema([
+                        Select::make('locale')->label('שפה')
+                            ->options(fn (Question $record): array => self::restorableLocales($record))
+                            ->default(fn (Question $record): ?string => array_key_first(self::restorableLocales($record)))
+                            ->required(),
+                    ])
                     ->successNotificationTitle('השאלה המקורית חזרה למאגר')
-                    ->action(function (Question $record, Action $action, RestoreSharedQuestion $restore): void {
-                        $restore($record, self::household());
+                    ->action(function (Question $record, array $data, Action $action, RestoreSharedQuestion $restore): void {
+                        $restore($record, self::household(), $data['locale']);
                         $action->success();
                     }),
             ]);
@@ -76,6 +79,19 @@ class SharedQuestionResource extends Resource
     public static function getPages(): array
     {
         return ['index' => ListSharedQuestions::route('/')];
+    }
+
+    /** @return array<string, string> */
+    private static function restorableLocales(Question $source): array
+    {
+        $replacement = $source->replacements->first();
+
+        $locales = array_diff(
+            $replacement->suppressed_locales ?? [],
+            $replacement?->livePrivateVersions->pluck('locale')->all() ?? [],
+        );
+
+        return array_combine($locales, $locales);
     }
 
     private static function household(): Team

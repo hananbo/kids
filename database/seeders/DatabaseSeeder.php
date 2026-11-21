@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Games\GamePackages;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -20,7 +21,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        $this->callWith(HebrewQuizSeeder::class, ['team' => $parent->currentTeam]);
+        if (isset(app(GamePackages::class)->all()['hebrew-quiz'])) {
+            $this->callWith(HebrewQuizSeeder::class, ['team' => $parent->currentTeam]);
+        }
+
         $this->callWith(WordEntrySeeder::class, ['team' => $parent->currentTeam]);
     }
 }

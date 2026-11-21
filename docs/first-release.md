@@ -2,6 +2,13 @@
 
 A private, mobile-first Hebrew quiz show for one household, built with Laravel, MySQL, and Filament 5. The game will have its own name, rules, and visuals. The player app and parent-facing Filament screens use Hebrew RTL. Arithmetic reads left to right within Hebrew text. The catalog supports additional languages from launch.
 
+
+## Provision the private launch
+
+Deploy behind a household-only access gate, such as an identity-aware proxy limited to the invited adults. Use the existing adult sign-in to create or select one Team and give the household’s parents the Team owner or admin role. Use a verified account with platform-admin access for Shared Catalog approvals and platform availability.
+
+Run \`php artisan quiz:seed <household-slug>\` for that Team, then add its Child Profiles in the parent panel. Verify the access gate before sharing the deployment URL. The starter application’s existing account routes remain available behind the gate.
+
 ## Child play
 
 A parent signs in and selects a child profile. Returning to Filament or switching profiles requires fresh parent authentication.

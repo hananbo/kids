@@ -57,6 +57,10 @@ test('AI questions enter the quiz only after a parent reviews and publishes them
         ->assertSee('השאלה פורסמה')
         ->assertNoJavaScriptErrors();
 
+    $page->navigate('/parent/question-generation-batches')
+        ->assertSee('פורסמה')
+        ->assertSee('1 מתוך 1 פורסמו');
+
     $page->navigate('/parent/child-profiles')
         ->click('[data-test="select-child"]')
         ->click('[data-test="start-run"]')
@@ -110,8 +114,10 @@ test('a failed enrichment can be finished manually or retried without regenerati
     ]]])->preventStrayPrompts();
 
     $page->navigate('/parent/question-generation-batches')
+        ->assertSee('בפרסום')
+        ->assertSee('1 מתוך 2 פורסמו')
         ->click('[data-test="retry-question-batch"]')
-        ->assertSee('טיוטה')
+        ->assertSee('בפרסום')
         ->assertDontSee('העיבוד נכשל')
         ->navigate('/parent/questions')
         ->click('tr:has-text("איזו צורה יש לפתית שלג?") [data-test="review-question"]')

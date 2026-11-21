@@ -7,6 +7,7 @@ use App\Support\Catalog\CatalogRevision;
 use App\Support\Catalog\QuestionContent;
 use Database\Factories\QuestionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property bool $quiz_eligible
  * @property int|null $replaces_question_id
  * @property int|null $copied_from_version_id
- * @property bool $suppresses_original
+ * @property list<string>|null $suppressed_locales
+ * @property-read Collection<int, PublishedQuestionVersion> $livePrivateVersions
  * @property-read PublishedQuestionVersion|null $copiedFromVersion
  * @property-read Team $team
  * @property-read PublishedQuestionVersion|null $publishedVersion
@@ -49,7 +51,7 @@ class Question extends Model
             'target_age' => 'integer',
             'subjects' => 'array',
             'quiz_eligible' => 'boolean',
-            'suppresses_original' => 'boolean',
+            'suppressed_locales' => 'array',
         ];
     }
 

@@ -15,6 +15,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
+/** @extends resource<Game> */
 class GameResource extends Resource
 {
     protected static ?string $model = Game::class;
@@ -24,6 +25,11 @@ class GameResource extends Resource
     protected static ?string $modelLabel = 'משחק';
 
     protected static ?string $pluralModelLabel = 'משחקים';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->installed();
+    }
 
     public static function table(Table $table): Table
     {

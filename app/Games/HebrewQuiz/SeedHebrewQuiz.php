@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Games\HebrewQuiz;
 
 use App\Models\Team;
 use Database\Seeders\HebrewQuizSeeder;
