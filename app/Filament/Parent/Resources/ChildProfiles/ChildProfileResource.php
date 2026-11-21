@@ -82,7 +82,7 @@ class ChildProfileResource extends Resource
                         $shortages = $selectQuestions->poolShortages($record);
 
                         return $shortages === []
-                            ? 'יש מספיק שאלות מאושרות לפתיחת משחק ברמת ההתחלה.'
+                            ? 'יש מספיק שאלות מאושרות לפתיחת משחק ברמה הזמינה.'
                             : implode(' ', $shortages);
                     })
                     ->modalSubmitAction(false),

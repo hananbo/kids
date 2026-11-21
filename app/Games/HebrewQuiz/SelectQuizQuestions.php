@@ -21,12 +21,15 @@ class SelectQuizQuestions
         3 => [[[7], 3], [[8, 9], 3], [[10], 2]],
     ];
 
-    public function __construct(private PlayableQuestionVersions $playableVersions) {}
+    public function __construct(
+        private PlayableQuestionVersions $playableVersions,
+        private QuizProgress $progress,
+    ) {}
 
     /** @return Collection<int, PublishedQuestionVersion> */
-    public function __invoke(ChildProfile $profile): Collection
+    public function __invoke(ChildProfile $profile, int $level): Collection
     {
-        $groups = $this->questionGroups($profile);
+        $groups = $this->questionGroups($profile, $level);
         $shortages = $this->shortages($groups);
 
         if ($shortages !== []) {
@@ -54,11 +57,11 @@ class SelectQuizQuestions
     /** @return list<string> */
     public function poolShortages(ChildProfile $profile): array
     {
-        return $this->shortages($this->questionGroups($profile));
+        return $this->shortages($this->questionGroups($profile, $this->progress->highestLevel($profile)));
     }
 
     /** @return list<array{difficulties: list<int>, required: int, versions: Collection<int, PublishedQuestionVersion>}> */
-    private function questionGroups(ChildProfile $profile): array
+    private function questionGroups(ChildProfile $profile, int $level): array
     {
         $versions = ($this->playableVersions)(
             $profile->team_id,
@@ -79,7 +82,7 @@ class SelectQuizQuestions
             'versions' => $versions->filter(
                 fn (PublishedQuestionVersion $version): bool => in_array($version->difficulty, $group[0], true),
             ),
-        ], self::LEVEL_GROUPS[$profile->starting_level]));
+        ], self::LEVEL_GROUPS[$level]));
     }
 
     /**

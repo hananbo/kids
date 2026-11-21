@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 class AdvanceQuizRun
 {
+    public function __construct(private QuizProgress $progress) {}
+
     public function __invoke(QuizRun $run, int $questionId): void
     {
         DB::transaction(function () use ($run, $questionId): void {
@@ -30,7 +32,10 @@ class AdvanceQuizRun
                 return;
             }
 
-            $run->update(['completed_at' => now()]);
+            $run->update([
+                'completed_at' => now(),
+                'unlocked_level' => $this->progress->unlockedLevelAfter($run),
+            ]);
         });
     }
 }

@@ -37,6 +37,13 @@ class QuizRunQuestion extends Model
         ];
     }
 
+    public function approvedHint(): ?string
+    {
+        $hint = $this->version->content['hint'] ?? null;
+
+        return is_string($hint) && trim($hint) !== '' ? $hint : null;
+    }
+
     /** @return BelongsTo<QuizRun, $this> */
     public function quizRun(): BelongsTo
     {

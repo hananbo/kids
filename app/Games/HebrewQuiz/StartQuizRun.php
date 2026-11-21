@@ -12,7 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class StartQuizRun
 {
-    public function __construct(private SelectQuizQuestions $selectQuestions) {}
+    public function __construct(
+        private SelectQuizQuestions $selectQuestions,
+        private QuizProgress $progress,
+    ) {}
 
     public function __invoke(ChildProfile $profile): QuizRun
     {
@@ -33,7 +36,8 @@ class StartQuizRun
                 throw ValidationException::withMessages(['game' => 'החידון אינו זמין כרגע.']);
             }
 
-            $versions = ($this->selectQuestions)($profile);
+            $level = $this->progress->highestLevel($profile);
+            $versions = ($this->selectQuestions)($profile, $level);
             $availableVersions = PublishedQuestionVersion::query()
                 ->whereKey($versions->pluck('id')->all())
                 ->whereNull('withdrawn_at')
@@ -45,7 +49,7 @@ class StartQuizRun
                 throw ValidationException::withMessages(['pool' => 'מאגר השאלות השתנה. נסו להתחיל שוב.']);
             }
 
-            $run = $profile->quizRuns()->create(['game' => SelectQuizQuestions::GAME]);
+            $run = $profile->quizRuns()->create(['game' => SelectQuizQuestions::GAME, 'level' => $level]);
 
             foreach ($versions as $position => $version) {
                 $run->questions()->create([
