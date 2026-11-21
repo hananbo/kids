@@ -1,0 +1,37 @@
+{
+    "agents": [
+        "amp",
+        "junie",
+        "cursor",
+        "claude_code",
+        "codex",
+        "factory",
+        "opencode",
+        "grok_build"
+    ],
+    "cloud": false,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "pestphp/pest-plugin-agent"
+    ],
+    "sail": false,
+    "skills": [
+        "infer-conventions",
+        "ai-sdk-development",
+        "cashier-stripe-development",
+        "fortify-development",
+        "laravel-best-practices",
+        "testing-best-practices",
+        "configuring-horizon",
+        "pennant-development",
+        "socialite-development",
+        "wayfinder-development",
+        "inertia-react-development",
+        "tailwindcss-development",
+        "echo-react-development",
+        "echo-development",
+        "pest-plugin-agent"
+    ]
+}
