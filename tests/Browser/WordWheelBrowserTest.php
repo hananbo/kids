@@ -32,8 +32,10 @@ test('a child spins, reveals tiles, resumes, and solves a Hebrew puzzle', functi
         ->click('[data-test="select-child-word-wheel"]')
         ->assertPathIs("/{$team->slug}/word-wheel")
         ->assertSee('גלגל המילים')
+        ->assertVisible('[data-studio-lighting="welcome"][data-graphics="webgl2"] canvas')
         ->click('[data-test="wheel-start"]')
         ->assertPresent('[data-test="word-wheel"][data-stage="spin"]')
+        ->assertPresent('[data-studio-lighting="question"]')
         ->assertSee('פסים צבעוניים בשמיים אחרי גשם.')
         ->assertDontSee('קשת בענן')
         ->assertVisible('[data-test="spin-wheel"] [data-graphics="webgl2"] canvas');
@@ -53,10 +55,13 @@ test('a child spins, reveals tiles, resumes, and solves a Hebrew puzzle', functi
 
     $page->resize(390, 844);
     $page->click('[data-test="wheel-spin"]')
+        ->assertPresent('[data-studio-lighting="lock"]')
         ->assertAttribute('[data-test="word-wheel"]', 'data-spins', 1)
         ->assertPresent('[data-test="spin-wheel"][data-wheel-segment="3"]')
+        ->assertPresent('[data-studio-lighting="checkpoint"]')
         ->assertPresent('[data-test="word-wheel"][data-stage="guess"]')
         ->click('[data-test="wheel-letter-ק"]')
+        ->assertPresent('[data-studio-lighting="correct"]')
         ->assertSeeIn('[data-test="wheel-board"] [data-revealed=true]', 'ק')
         ->assertSeeIn('[data-test="wheel-score"]', '300')
         ->refresh()
@@ -67,6 +72,7 @@ test('a child spins, reveals tiles, resumes, and solves a Hebrew puzzle', functi
         ->fill('[data-test="wheel-solution"]', 'קשת בענן')
         ->click('[data-test="wheel-solve"]')
         ->assertPresent('[data-test="word-wheel"][data-stage="solved"]')
+        ->assertPresent('[data-studio-lighting="won"]')
         ->assertSee('קשת בענן')
         ->click('[data-test="wheel-replay"]')
         ->assertPresent('[data-test="word-wheel"][data-stage="spin"]')

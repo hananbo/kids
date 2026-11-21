@@ -17,6 +17,8 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SpinWheel } from '@/components/games/spin-wheel';
+import type { StudioPhase } from '@/components/games/studio-lights';
+import { StudioLights } from '@/components/games/studio-lights';
 import { useWheelSound } from '@/hooks/use-wheel-sound';
 import { exit } from '@/routes/child-mode';
 import { finish, guess, solve, spin, start } from '@/routes/word-wheel/play';
@@ -62,6 +64,34 @@ type Props = {
     attempt: Attempt | null;
     progress: { solved: number; bestScore: number };
 };
+
+function studioPhase(attempt: Attempt | null, spinning: boolean): StudioPhase {
+    if (spinning) {
+        return 'lock';
+    }
+
+    if (!attempt) {
+        return 'welcome';
+    }
+
+    switch (attempt.feedback?.kind) {
+        case 'spin':
+            return 'checkpoint';
+        case 'hit':
+            return 'correct';
+        case 'bankrupt':
+        case 'miss':
+        case 'incorrect':
+            return 'incorrect';
+        case 'lose-turn':
+        case 'finished':
+            return 'walked';
+        case 'solved':
+            return 'won';
+        default:
+            return 'question';
+    }
+}
 
 const alphabet = Array.from('אבגדהוזחטיכלמנסעפצקרשת');
 const baseLetters = { ך: 'כ', ם: 'מ', ן: 'נ', ף: 'פ', ץ: 'צ' };
@@ -191,6 +221,7 @@ export default function WordWheel({
     }, [openPanel]);
 
     const stage = attempt?.phase ?? 'welcome';
+    const lighting = studioPhase(attempt, spinning);
     const isComplete = stage === 'solved' || stage === 'finished';
     const isPlaying = stage === 'spin' || stage === 'guess';
     const previousStage = useRef(stage);
@@ -344,6 +375,7 @@ export default function WordWheel({
             lang="he"
             data-test="word-wheel"
             data-stage={stage}
+            data-lighting={lighting}
             data-spins={attempt?.spins ?? 0}
             data-spinning={spinning || undefined}
         >
@@ -353,6 +385,12 @@ export default function WordWheel({
                 src="/images/games/word-wheel-studio.webp"
                 alt=""
                 fetchPriority="high"
+            />
+            <StudioLights
+                theme="word-wheel"
+                phase={lighting}
+                transitionKey={`${attempt?.id}:${attempt?.revision}:${lighting}`}
+                tension={spinning ? 1 : 0}
             />
             <div className="word-wheel-shell">
                 <header className="word-wheel-header">

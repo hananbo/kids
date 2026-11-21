@@ -25,6 +25,20 @@ const palette = {
     won: [8, 0xffc353, 0xfff4b8],
 } as const;
 
+const wheelPalette: Record<StudioPhase, readonly [number, number]> = {
+    welcome: [0xfab76e, 0x8df2cd],
+    intermission: [0x50cbb0, 0xffe5ae],
+    checkpoint: [0xffc15b, 0xffefb3],
+    question: [0x5bd8bc, 0xc6ffdf],
+    lock: [0xff9e46, 0xffe0a2],
+    correct: [0x53e89f, 0xdeffc0],
+    incorrect: [0xf97962, 0xffbf97],
+    walked: [0x8fb7d6, 0xffdb96],
+    won: [0xffc758, 0xffffbd],
+};
+
+type StudioTheme = 'spark' | 'word-wheel';
+
 const vertex = `#version 300 es
 in vec2 aPosition;
 out vec2 uv;
@@ -43,6 +57,7 @@ uniform float age;
 uniform float aspect;
 uniform float phase;
 uniform float tension;
+uniform float wheel;
 uniform vec3 tint;
 out vec4 light;
 
@@ -71,8 +86,17 @@ void main() {
     float grid = abs(p.x) + abs(p.y) * 1.35;
     float early = 1.0 - smoothstep(0.2, 1.45, age);
 
+    if (wheel > 0.5) {
+        float arcSpeed = phase == 4.0 ? 3.8 : 0.56;
+        float orbit = pow(max(0.0, cos(angle * 5.0 - time * arcSpeed)), 4.0);
+        float arcs = halo(radius - 0.57, 0.013) + 0.65 * halo(radius - 0.69, 0.02);
+        float runner = cos(uv.y * 11.0 - time * arcSpeed + uv.x * 4.0);
+        intensity += arcs * orbit * (phase == 4.0 ? 0.63 : 0.27);
+        intensity += rimLight * max(0.0, runner) * (phase == 4.0 ? 0.21 : 0.1);
+    }
+
     if (phase <= 2.0 || phase == 8.0) {
-        float aperture = abs(p.x) + abs(p.y) * 1.52;
+        float aperture = mix(abs(p.x) + abs(p.y) * 1.52, radius * 1.25, wheel);
         float gate = 0.15 + 1.2 * min(age, 1.6);
         float rotation = cos(8.0 * angle - time * 1.2);
         float sweepWings = smoothstep(0.28, 0.88, rotation) * halo(radius - 0.46, 0.21);
@@ -107,7 +131,12 @@ function rgb(tint: number) {
 }
 
 function studioScene(
-    read: () => { phase: StudioPhase; transitionKey: string; tension: number },
+    read: () => {
+        phase: StudioPhase;
+        transitionKey: string;
+        tension: number;
+        theme: StudioTheme;
+    },
 ): GameScene {
     return ({ pixi, stage }) => {
         const geometry = new pixi.Geometry({
@@ -125,6 +154,7 @@ function studioScene(
             aspect: { type: 'f32', value: 1 },
             phase: { type: 'f32', value: 0 },
             tension: { type: 'f32', value: 0 },
+            wheel: { type: 'f32', value: 0 },
             tint: {
                 type: 'vec3<f32>',
                 value: new Float32Array(rgb(palette.welcome[1])),
@@ -165,8 +195,13 @@ function studioScene(
                 uniforms.aspect = width / height;
             },
             update(delta) {
-                const { phase, transitionKey, tension } = read();
-                const [index, tint, highlight] = palette[phase];
+                const { phase, transitionKey, tension, theme } = read();
+                const [index, baseTint, baseHighlight] = palette[phase];
+                const [tint, highlight] =
+                    theme === 'word-wheel'
+                        ? wheelPalette[phase]
+                        : [baseTint, baseHighlight];
+                uniforms.wheel = theme === 'word-wheel' ? 1 : 0;
                 const changing = previous !== transitionKey;
 
                 if (changing) {
@@ -258,22 +293,26 @@ export function StudioLights({
     phase,
     transitionKey,
     tension,
+    theme = 'spark',
 }: {
     phase: StudioPhase;
     transitionKey: string;
     tension: number;
+    theme?: StudioTheme;
 }) {
-    const state = useRef({ phase, transitionKey, tension });
+    const state = useRef({ phase, transitionKey, tension, theme });
     const scene = useCallback<GameScene>(
         (renderer) => studioScene(() => state.current)(renderer),
         [],
     );
 
     useEffect(() => {
-        state.current = { phase, transitionKey, tension };
-    }, [phase, tension, transitionKey]);
+        state.current = { phase, transitionKey, tension, theme };
+    }, [phase, tension, theme, transitionKey]);
 
-    const accent = rgb(palette[phase][1])
+    const accent = rgb(
+        theme === 'word-wheel' ? wheelPalette[phase][0] : palette[phase][1],
+    )
         .map((channel) => `${channel * 100}%`)
         .join(' ');
 
@@ -281,8 +320,8 @@ export function StudioLights({
         <GameCanvas
             scene={scene}
             pixelBudget={400_000}
-            className="spark-studio-effects"
-            canvasClassName="spark-studio-canvas"
+            className={`${theme}-studio-effects`}
+            canvasClassName={`${theme}-studio-canvas`}
             data-studio-lighting={phase}
             style={{
                 background: `radial-gradient(ellipse at 84% 8%, rgb(${accent} / 21%), transparent 60%), radial-gradient(ellipse at 12% 44%, rgb(${accent} / 12%), transparent 42%)`,
