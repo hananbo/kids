@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * @property int $id
  * @property int $team_id
- * @property array<string, string> $content
+ * @property array<string, mixed> $content
  * @property int $difficulty
  * @property bool $quiz_eligible
  * @property-read Team $team

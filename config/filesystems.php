@@ -38,6 +38,12 @@ return [
             'report' => false,
         ],
 
+        'quiz_media' => [
+            'driver' => 'local',
+            'root' => storage_path('app/quiz-media'),
+            'visibility' => 'private',
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

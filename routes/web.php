@@ -3,8 +3,10 @@
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ChildModeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\QuestionMediaController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
+use App\Support\Catalog\QuestionContent;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -12,6 +14,11 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('parent-unlock', ChildModeController::class)
     ->middleware(['auth', 'password.confirm'])
     ->name('child-mode.exit');
+
+Route::get('parent/questions/{question}/media/{field}', QuestionMediaController::class)
+    ->middleware(['auth', 'verified'])
+    ->whereIn('field', QuestionContent::FIELDS)
+    ->name('parent.questions.media');
 
 Route::middleware(['guest', 'throttle:6,1'])->group(function () {
     Route::get('auth/github/redirect', [SocialiteController::class, 'redirect'])->name('socialite.github.redirect');
