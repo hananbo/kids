@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Catalog\CopySharedQuestion;
 use App\Actions\Catalog\PublishQuestion;
+use App\Actions\Catalog\ShareQuestionVersion;
 use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Models\ChildProfile;
 use App\Models\Question;
@@ -97,4 +99,42 @@ test('a parent cannot publish an unrelated household file or active content disg
     }
 
     expect($question->versions()->exists())->toBeFalse();
+});
+
+test('a shared catalog approval previews exact media and a private adaptation can reuse it', function () {
+    $contributor = User::factory()->create();
+    $parent = User::factory()->create();
+    $admin = User::factory()->admin()->create();
+    $team = $parent->currentTeam;
+    $child = ChildProfile::factory()->for($team)->create();
+    app(HebrewQuizSeeder::class)->run($team);
+
+    $path = "{$contributor->current_team_id}/shared.wav";
+    Storage::fake('quiz_media')->put($path, file_get_contents(base_path('tests/Browser/Fixtures/tone.wav')));
+    $question = Question::factory()->for($contributor->currentTeam)->create();
+    $question->update(['content' => [
+        ...$question->content,
+        'prompt' => ['type' => 'audio', 'path' => $path, 'alternative' => 'טון מהקטלוג'],
+    ]]);
+
+    $this->actingAs($contributor);
+    $version = app(PublishQuestion::class)($question, $question->draftRevision());
+    $adminPreview = route('admin.catalog-versions.media', ['version' => $version, 'field' => 'prompt']);
+    $this->get($adminPreview)->assertForbidden();
+    $this->actingAs($admin)->get($adminPreview)->assertOk()->assertHeader('Content-Disposition', 'inline');
+    app(ShareQuestionVersion::class)($version);
+
+    $this->actingAs($parent);
+    $copy = app(CopySharedQuestion::class)($question, $team);
+    $copyVersion = app(PublishQuestion::class)($copy, $copy->draftRevision());
+
+    $this->withSession(['child_mode' => ['profile_id' => $child->id, 'team_id' => $team->id]])
+        ->post(route('quiz.play.start', $team))->assertRedirect(route('quiz.play.show', $team));
+
+    $run = $child->quizRuns()->sole();
+    $attempt = $run->questions()->firstOrFail();
+    expect($attempt->published_question_version_id)->toBe($copyVersion->id);
+    $this->get(route('quiz.play.media', ['current_team' => $team, 'run' => $run->id, 'question' => $attempt->id, 'slot' => 'prompt']))
+        ->assertOk()
+        ->assertHeader('Content-Disposition', 'inline');
 });

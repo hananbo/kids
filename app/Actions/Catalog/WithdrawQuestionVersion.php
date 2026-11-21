@@ -12,10 +12,14 @@ class WithdrawQuestionVersion
 {
     public function __invoke(Question $question, int $versionId): void
     {
-        Gate::authorize('update', $question->team);
-
         DB::transaction(function () use ($question, $versionId): void {
             $version = $question->versions()->lockForUpdate()->findOrFail($versionId);
+
+            if ($version->shared_from_version_id !== null) {
+                Gate::authorize('manage-shared-catalog');
+            } else {
+                Gate::authorize('update', $question->team);
+            }
 
             if ($version->withdrawn_at !== null) {
                 return;

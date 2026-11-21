@@ -2,9 +2,9 @@
 
 namespace App\Games\HebrewQuiz;
 
+use App\Actions\Catalog\PlayableQuestionVersions;
 use App\Models\ChildProfile;
 use App\Models\PublishedQuestionVersion;
-use App\Models\Question;
 use App\Models\QuizRunQuestion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -20,6 +20,8 @@ class SelectQuizQuestions
         2 => [[[4], 3], [[5], 3], [[6], 2]],
         3 => [[[7], 3], [[8, 9], 3], [[10], 2]],
     ];
+
+    public function __construct(private PlayableQuestionVersions $playableVersions) {}
 
     /** @return Collection<int, PublishedQuestionVersion> */
     public function __invoke(ChildProfile $profile): Collection
@@ -58,17 +60,12 @@ class SelectQuizQuestions
     /** @return list<array{difficulties: list<int>, required: int, versions: Collection<int, PublishedQuestionVersion>}> */
     private function questionGroups(ChildProfile $profile): array
     {
-        $versions = Question::query()
-            ->where('team_id', $profile->team_id)
-            ->withWhereHas('publishedVersion', fn (Builder|HasOne $query) => $query
+        $versions = ($this->playableVersions)(
+            $profile->team_id,
+            fn (Builder|HasOne $query) => $query
                 ->where('quiz_eligible', true)
-                ->where('target_age', '<=', $profile->learning_age))
-            ->latest('id')
-            ->get()
-            ->toBase()
-            ->map(fn (Question $question): ?PublishedQuestionVersion => $question->publishedVersion)
-            ->filter()
-            ->values();
+                ->where('target_age', '<=', $profile->learning_age),
+        );
 
         if ($profile->subjects) {
             $versions = $versions->filter(

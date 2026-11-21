@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property list<string>|null $subjects
  * @property bool $quiz_eligible
  * @property Carbon|null $withdrawn_at
+ * @property int|null $shared_from_version_id
  */
 #[Fillable(['question_id', 'locale', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible', 'approved_by'])]
 class PublishedQuestionVersion extends Model
@@ -38,6 +40,12 @@ class PublishedQuestionVersion extends Model
             'quiz_eligible' => 'boolean',
             'withdrawn_at' => 'datetime',
         ];
+    }
+
+    /** @return HasOne<self, $this> */
+    public function sharedCopy(): HasOne
+    {
+        return $this->hasOne(self::class, 'shared_from_version_id');
     }
 
     /** @return BelongsTo<Question, $this> */

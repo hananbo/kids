@@ -21,10 +21,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $target_age
  * @property list<string>|null $subjects
  * @property bool $quiz_eligible
+ * @property int|null $replaces_question_id
+ * @property int|null $copied_from_version_id
+ * @property bool $suppresses_original
+ * @property-read PublishedQuestionVersion|null $copiedFromVersion
  * @property-read Team $team
  * @property-read PublishedQuestionVersion|null $publishedVersion
+ * @property-read PublishedQuestionVersion|null $sharedVersion
  */
-#[Fillable(['team_id', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible', 'generation_media_suggestion'])]
+#[Fillable(['copied_from_version_id', 'team_id', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible', 'generation_media_suggestion'])]
 class Question extends Model
 {
     /** @use HasFactory<QuestionFactory> */
@@ -40,6 +45,7 @@ class Question extends Model
             'target_age' => 'integer',
             'subjects' => 'array',
             'quiz_eligible' => 'boolean',
+            'suppresses_original' => 'boolean',
         ];
     }
 
@@ -59,8 +65,32 @@ class Question extends Model
     public function publishedVersion(): HasOne
     {
         return $this->hasOne(PublishedQuestionVersion::class)
-            ->ofMany(['id' => 'max'], fn (Builder $query) => $query->where('locale', 'he'))
+            ->ofMany(['id' => 'max'], fn (Builder $query) => $query
+                ->where('locale', 'he')
+                ->whereNull('shared_from_version_id'))
             ->whereNull('published_question_versions.withdrawn_at');
+    }
+
+    /** @return HasOne<PublishedQuestionVersion, $this> */
+    public function sharedVersion(): HasOne
+    {
+        return $this->hasOne(PublishedQuestionVersion::class)
+            ->ofMany(['shared_from_version_id' => 'max', 'id' => 'max'], fn (Builder $query) => $query
+                ->where('locale', 'he')
+                ->whereNotNull('shared_from_version_id'))
+            ->whereNull('published_question_versions.withdrawn_at');
+    }
+
+    /** @return HasMany<Question, $this> */
+    public function replacements(): HasMany
+    {
+        return $this->hasMany(self::class, 'replaces_question_id');
+    }
+
+    /** @return BelongsTo<PublishedQuestionVersion, $this> */
+    public function copiedFromVersion(): BelongsTo
+    {
+        return $this->belongsTo(PublishedQuestionVersion::class, 'copied_from_version_id');
     }
 
     public function draftRevision(): string

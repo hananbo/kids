@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PublishedQuestionVersion;
 use App\Models\Question;
 use App\Support\Catalog\QuestionContent;
 use App\Support\Catalog\QuestionMedia;
@@ -17,5 +18,13 @@ class QuestionMediaController extends Controller
         Gate::authorize('update', $question->team);
 
         return QuestionMedia::response(QuestionContent::field($question->content[$field] ?? null));
+    }
+
+    public function published(PublishedQuestionVersion $version, string $field): BinaryFileResponse
+    {
+        Gate::authorize('manage-shared-catalog');
+        abort_if($version->withdrawn_at !== null, 404);
+
+        return QuestionMedia::response(QuestionContent::field($version->content[$field] ?? null));
     }
 }

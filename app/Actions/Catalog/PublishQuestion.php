@@ -23,7 +23,7 @@ class PublishQuestion
                 throw ValidationException::withMessages(['revision' => 'השאלה השתנתה. יש לפתוח מחדש את הסקירה.']);
             }
 
-            $content = QuestionContent::validate($draft->content, $draft->team_id);
+            $content = QuestionContent::validate($draft->content, $draft->team_id, $draft->copiedFromVersion->content ?? []);
 
             $metadata = Validator::make($draft->only(['target_age', 'subjects', 'difficulty']), [
                 'target_age' => ['required', 'integer', 'between:1,18'],
@@ -32,13 +32,19 @@ class PublishQuestion
                 'difficulty' => ['required', 'integer', 'between:1,10'],
             ])->validate();
 
-            return $draft->versions()->create([
+            $version = $draft->versions()->create([
                 'locale' => 'he',
                 'content' => $content,
                 ...$metadata,
                 'quiz_eligible' => $draft->quiz_eligible,
                 'approved_by' => auth()->id(),
             ]);
+
+            if ($draft->replaces_question_id !== null && ! $draft->suppresses_original) {
+                $draft->forceFill(['suppresses_original' => true])->save();
+            }
+
+            return $version;
         });
     }
 }

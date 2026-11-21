@@ -20,6 +20,11 @@ Route::get('parent/questions/{question}/media/{field}', QuestionMediaController:
     ->whereIn('field', QuestionContent::FIELDS)
     ->name('parent.questions.media');
 
+Route::get('admin/catalog-question-versions/{version}/media/{field}', [QuestionMediaController::class, 'published'])
+    ->middleware(['auth', 'verified'])
+    ->whereIn('field', QuestionContent::FIELDS)
+    ->name('admin.catalog-versions.media');
+
 Route::middleware(['guest', 'throttle:6,1'])->group(function () {
     Route::get('auth/github/redirect', [SocialiteController::class, 'redirect'])->name('socialite.github.redirect');
     Route::get('auth/github/callback', [SocialiteController::class, 'callback'])->name('socialite.github.callback');

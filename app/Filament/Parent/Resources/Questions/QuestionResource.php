@@ -56,7 +56,9 @@ class QuestionResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->withExists([
-                'versions as has_withdrawable_versions' => fn (Builder $versions): Builder => $versions->whereNull('withdrawn_at'),
+                'versions as has_withdrawable_versions' => fn (Builder $versions): Builder => $versions
+                    ->whereNull('withdrawn_at')
+                    ->whereNull('shared_from_version_id'),
             ]))
             ->columns([
                 TextColumn::make('content.prompt')->label('שאלה')->state(fn (Question $record): string => QuestionContent::label($record->content['prompt'] ?? null))->wrap(),
@@ -117,6 +119,7 @@ class QuestionResource extends Resource
                             ->label('גרסה שפורסמה')
                             ->options(fn (Question $record): array => $record->versions()
                                 ->whereNull('withdrawn_at')
+                                ->whereNull('shared_from_version_id')
                                 ->latest('id')
                                 ->get()
                                 ->mapWithKeys(fn (PublishedQuestionVersion $version): array => [
