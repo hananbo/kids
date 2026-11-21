@@ -14,19 +14,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $locale
  * @property array<string, string> $content
  * @property int $difficulty
+ * @property int $target_age
+ * @property list<string>|null $subjects
  * @property bool $quiz_eligible
  */
-#[Fillable(['question_id', 'locale', 'content', 'difficulty', 'quiz_eligible', 'approved_by'])]
+#[Fillable(['question_id', 'locale', 'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible', 'approved_by'])]
 class PublishedQuestionVersion extends Model
 {
     /** @use HasFactory<PublishedQuestionVersionFactory> */
     use HasFactory;
+
+    protected $attributes = ['target_age' => 6];
 
     protected function casts(): array
     {
         return [
             'content' => 'array',
             'difficulty' => 'integer',
+            'target_age' => 'integer',
+            'subjects' => 'array',
             'quiz_eligible' => 'boolean',
         ];
     }

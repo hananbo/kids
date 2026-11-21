@@ -34,10 +34,17 @@ class PublishQuestion
                 ],
             )->validate();
 
+            $metadata = Validator::make($draft->only(['target_age', 'subjects', 'difficulty']), [
+                'target_age' => ['required', 'integer', 'between:1,18'],
+                'subjects' => ['nullable', 'array', 'list'],
+                'subjects.*' => ['required', 'string', 'max:60'],
+                'difficulty' => ['required', 'integer', 'between:1,10'],
+            ])->validate();
+
             return $draft->versions()->create([
                 'locale' => 'he',
                 'content' => $content,
-                'difficulty' => $draft->difficulty,
+                ...$metadata,
                 'quiz_eligible' => $draft->quiz_eligible,
                 'approved_by' => auth()->id(),
             ]);
