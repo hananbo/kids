@@ -1,6 +1,6 @@
 # First release for the Hebrew quiz show
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 
