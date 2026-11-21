@@ -3,6 +3,7 @@
 namespace App\Games\HebrewQuiz;
 
 use App\Models\ChildProfile;
+use App\Models\Game;
 use App\Models\QuizRun;
 use App\Models\Team;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,6 +29,7 @@ class QuizController
         return Inertia::render('games/hebrew-quiz', [
             'team' => $current_team->slug,
             'player' => $profile->name,
+            'available' => Game::allowsStart(SelectQuizQuestions::GAME, $current_team->id),
             'run' => $run ? [
                 'id' => $run->id,
                 'position' => $run->position + 1,

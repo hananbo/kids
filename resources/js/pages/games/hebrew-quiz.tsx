@@ -15,6 +15,7 @@ type Feedback = {
 type Props = {
     team: string;
     player: string;
+    available: boolean;
     run: {
         id: number;
         position: number;
@@ -31,7 +32,13 @@ type Props = {
     } | null;
 };
 
-export default function HebrewQuiz({ team, player, run, question }: Props) {
+export default function HebrewQuiz({
+    team,
+    player,
+    available,
+    run,
+    question,
+}: Props) {
     const [processing, setProcessing] = useState(false);
     const { errors } = usePage().props;
     const feedback = question?.feedback;
@@ -175,14 +182,18 @@ export default function HebrewQuiz({ team, player, run, question }: Props) {
                                     החידון הופסק כי אחת השאלות הוסרה.
                                 </p>
                             )}
-                            <Button
-                                data-test="start-run"
-                                className="min-h-12"
-                                disabled={processing}
-                                onClick={() => submit(start.url(team))}
-                            >
-                                {run?.completed ? 'חידון חדש' : 'מתחילים'}
-                            </Button>
+                            {available ? (
+                                <Button
+                                    data-test="start-run"
+                                    className="min-h-12"
+                                    disabled={processing}
+                                    onClick={() => submit(start.url(team))}
+                                >
+                                    {run?.completed ? 'חידון חדש' : 'מתחילים'}
+                                </Button>
+                            ) : (
+                                <p role="status">החידון אינו זמין כרגע.</p>
+                            )}
                         </>
                     )}
                     {errors.pool && <p role="alert">{errors.pool}</p>}

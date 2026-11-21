@@ -3,6 +3,7 @@
 namespace App\Games\HebrewQuiz;
 
 use App\Models\ChildProfile;
+use App\Models\Game;
 use App\Models\PublishedQuestionVersion;
 use App\Models\QuizRun;
 use Illuminate\Support\Arr;
@@ -26,6 +27,10 @@ class StartQuizRun
 
             if ($active) {
                 return $active;
+            }
+
+            if (! Game::allowsStart(SelectQuizQuestions::GAME, $profile->team_id, lock: true)) {
+                throw ValidationException::withMessages(['game' => 'החידון אינו זמין כרגע.']);
             }
 
             $versions = ($this->selectQuestions)($profile);
