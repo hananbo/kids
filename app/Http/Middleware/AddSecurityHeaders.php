@@ -20,6 +20,14 @@ class AddSecurityHeaders
 
         $response = $next($request);
         $nonce = Vite::cspNonce();
+        $scriptPolicy = "script-src 'self' 'nonce-{$nonce}'";
+
+        if ($request->isMethod('GET') && $request->routeIs('filament.parent.*', 'filament.admin.*')
+            && str_starts_with($response->headers->get('Content-Type', ''), 'text/html')) {
+            // shortcut: the installed Filament Alpine expressions require evaluation, remove when Filament supports the CSP-safe evaluator.
+            $scriptPolicy .= " 'unsafe-eval'";
+        }
+
         $policy = implode('; ', [
             "default-src 'self'",
             "base-uri 'self'",
@@ -28,7 +36,7 @@ class AddSecurityHeaders
             "form-action 'self'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "script-src 'self' 'nonce-{$nonce}'",
+            $scriptPolicy,
             "style-src 'self' 'unsafe-inline'",
             app()->isLocal() ? "connect-src 'self' ws: wss:" : "connect-src 'self'",
         ]);

@@ -4,6 +4,7 @@ use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\AssignRequestContext;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequireParentMode;
 use App\Http\Middleware\SetTeamUrlDefaults;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustHosts(at: fn (): array => config('security.http.trusted_hosts'));
 
         $middleware->web(append: [
+            RequireParentMode::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasTeams;
+use App\Enums\TeamPermission;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -49,9 +50,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, Pas
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $panel->getId() === 'admin'
-            && $this->is_admin
-            && $this->hasVerifiedEmail();
+        return $this->hasVerifiedEmail() && match ($panel->getId()) {
+            'admin' => $this->is_admin,
+            'parent' => $this->currentTeam !== null
+                && $this->hasTeamPermission($this->currentTeam, TeamPermission::UpdateTeam),
+            default => false,
+        };
     }
 
     /**

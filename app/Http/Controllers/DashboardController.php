@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TeamInvitation;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,6 +34,7 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
+            'canManageHousehold' => $request->user()->canAccessPanel(Filament::getPanel('parent')),
         ]);
     }
 }

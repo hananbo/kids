@@ -35,6 +35,10 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        if ($request->session()->has('child_mode')) {
+            return parent::share($request);
+        }
+
         $user = $request->user();
 
         return [
