@@ -18,6 +18,7 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -44,7 +45,13 @@ class QuestionResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components(self::draftFields());
+        return $schema->components([
+            ...self::draftFields(),
+            Textarea::make('generation_media_suggestion')
+                ->label('הצעת מדיה מההעשרה')
+                ->maxLength(1000)
+                ->visible(fn (?Question $record): bool => $record?->question_generation_batch_id !== null),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -60,14 +67,18 @@ class QuestionResource extends Resource
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
-                EditAction::make()->iconButton(),
+                EditAction::make()->iconButton()
+                    ->extraAttributes(['data-test' => 'edit-question'])
+                    ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-question'])),
                 Action::make('publish')
                     ->label('סקירה ופרסום')
                     ->iconButton()
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->extraAttributes(['data-test' => 'review-question'])
                     ->modalHeading('אישור השאלה לפרסום')
-                    ->modalDescription('בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
+                    ->modalDescription(fn (Question $record): string => $record->question_generation_batch_id === null
+                        ? 'בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.'
+                        : 'בהכנה לפרסום. בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
                     ->fillForm(fn (Question $record): array => [
                         'revision' => $record->draftRevision(),
                         'content' => $record->content,
@@ -76,7 +87,13 @@ class QuestionResource extends Resource
                         'subjects' => $record->subjects,
                         'quiz_eligible' => $record->quiz_eligible,
                     ])
-                    ->schema([Hidden::make('revision'), ...self::draftFields(readOnly: true)])
+                    ->schema([
+                        Hidden::make('revision'),
+                        ...self::draftFields(readOnly: true),
+                        TextEntry::make('generation_media_suggestion')
+                            ->label('הצעת מדיה מההעשרה')
+                            ->visible(fn (Question $record): bool => filled($record->generation_media_suggestion)),
+                    ])
                     ->modalSubmitAction(fn (Action $action): Action => $action->label('פרסום')->extraAttributes(['data-test' => 'publish-question-submit']))
                     ->successNotificationTitle('השאלה פורסמה')
                     ->action(function (Question $record, array $data, Action $action, PublishQuestion $publish): void {
@@ -143,6 +160,12 @@ class QuestionResource extends Resource
             Textarea::make('content.explanation')
                 ->label('הסבר')->required()->maxLength(2000)->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => 'draft-explanation']),
+            Textarea::make('content.hint')
+                ->label('רמז')->maxLength(1000)->disabled($readOnly),
+            TagsInput::make('content.sources')
+                ->label('מקורות לסקירה')
+                ->nestedRecursiveRules(['required', 'url:http,https', 'max:2048'])
+                ->disabled($readOnly),
             TagsInput::make('subjects')
                 ->label('נושאים')->nestedRecursiveRules(['required', 'string', 'max:60'])->disabled($readOnly),
             TextInput::make('target_age')

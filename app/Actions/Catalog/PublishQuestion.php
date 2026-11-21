@@ -23,7 +23,7 @@ class PublishQuestion
             }
 
             $content = Validator::make(
-                array_map('trim', $draft->content),
+                array_map(fn (mixed $value): mixed => is_string($value) ? trim($value) : $value, $draft->content),
                 [
                     'prompt' => ['required', 'string', 'max:255'],
                     'correct_answer' => ['required', 'string', 'max:255'],
