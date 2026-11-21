@@ -3,11 +3,12 @@
 namespace App\Games\HebrewQuiz;
 
 use App\Models\QuizRun;
+use App\Support\Catalog\QuestionContent;
 use Illuminate\Support\Facades\DB;
 
 class RecordQuizAnswer
 {
-    public const CHOICES = ['correct_answer', 'distractor_one', 'distractor_two', 'distractor_three'];
+    public const CHOICES = QuestionContent::CHOICES;
 
     public function __invoke(QuizRun $run, int $questionId, int $choice): void
     {

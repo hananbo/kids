@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Models\PublishedQuestionVersion;
 use App\Models\Question;
+use App\Support\Catalog\QuestionContent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -22,17 +23,7 @@ class PublishQuestion
                 throw ValidationException::withMessages(['revision' => 'השאלה השתנתה. יש לפתוח מחדש את הסקירה.']);
             }
 
-            $content = Validator::make(
-                array_map(fn (mixed $value): mixed => is_string($value) ? trim($value) : $value, $draft->content),
-                [
-                    'prompt' => ['required', 'string', 'max:255'],
-                    'correct_answer' => ['required', 'string', 'max:255'],
-                    'distractor_one' => ['required', 'string', 'max:255', 'different:correct_answer'],
-                    'distractor_two' => ['required', 'string', 'max:255', 'different:correct_answer,distractor_one'],
-                    'distractor_three' => ['required', 'string', 'max:255', 'different:correct_answer,distractor_one,distractor_two'],
-                    'explanation' => ['required', 'string', 'max:2000'],
-                ],
-            )->validate();
+            $content = QuestionContent::validate($draft->content, $draft->team_id, $draft->copiedFromVersion->content ?? []);
 
             $metadata = Validator::make($draft->only(['target_age', 'subjects', 'difficulty']), [
                 'target_age' => ['required', 'integer', 'between:1,18'],

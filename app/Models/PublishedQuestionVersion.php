@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $question_id
  * @property string $locale
- * @property array<string, string> $content
+ * @property array<string, mixed> $content
  * @property int $difficulty
  * @property int $target_age
  * @property list<string>|null $subjects

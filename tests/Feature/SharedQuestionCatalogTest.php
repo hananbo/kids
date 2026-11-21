@@ -7,6 +7,7 @@ use App\Models\ChildProfile;
 use App\Models\PublishedQuestionVersion;
 use App\Models\Question;
 use App\Models\User;
+use App\Support\Catalog\QuestionContent;
 use Database\Seeders\HebrewQuizSeeder;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
@@ -40,7 +41,7 @@ test('a platform admin shares the exact approved version while a later private p
     Filament::setCurrentPanel(Filament::getPanel('admin'));
     Livewire::test(ListCatalogQuestionVersions::class)
         ->mountAction(TestAction::make('share')->table($sharedVersion))
-        ->assertSchemaStateSet(['content.prompt' => 'שאלה שאושרה לקטלוג'])
+        ->assertSchemaStateSet(['content.prompt.value' => 'שאלה שאושרה לקטלוג'])
         ->callMountedAction()
         ->assertNotified('Question version shared');
 
@@ -52,7 +53,7 @@ test('a platform admin shares the exact approved version while a later private p
         ->post(route('quiz.play.start', $team))
         ->assertRedirect(route('quiz.play.show', $team));
     $this->get(route('quiz.play.show', $team))->assertInertia(fn (Assert $page) => $page
-        ->where('question.prompt', 'שאלה שאושרה לקטלוג')
+        ->where('question.prompt.value', 'שאלה שאושרה לקטלוג')
         ->etc()
     );
 });
@@ -80,7 +81,7 @@ test('a household adaptation replaces its shared source until the parent explici
             ->post(route('quiz.play.start', $team))
             ->assertRedirect(route('quiz.play.show', $team));
         $this->get(route('quiz.play.show', $team))->assertInertia(fn (Assert $page) => $page
-            ->where('question.prompt', $prompt)
+            ->where('question.prompt.value', $prompt)
             ->etc()
         );
         session()->forget('child_mode');
@@ -97,7 +98,7 @@ test('a household adaptation replaces its shared source until the parent explici
 
     Livewire::test(ManageQuestions::class)
         ->callAction(TestAction::make('edit')->table($replacement), data: [
-            'content' => [...$replacement->content, 'prompt' => $replacementPrompt],
+            'content' => QuestionContent::normalize([...$replacement->content, 'prompt' => $replacementPrompt]),
         ])->assertHasNoActionErrors();
     Livewire::test(ManageQuestions::class)
         ->callAction(TestAction::make('publish')->table($replacement))

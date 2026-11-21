@@ -3,10 +3,28 @@
 use App\Models\ChildProfile;
 use App\Models\User;
 use Database\Seeders\HebrewQuizSeeder;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\FileUploadController;
 
 test('parents publish Hebrew content in Filament and a child plays it on a phone', function () {
     $parent = User::factory()->create();
     app(HebrewQuizSeeder::class)->run($parent->currentTeam);
+    Storage::fake('quiz_media');
+    Storage::fake('tmp-for-tests');
+
+    // Pest's HTTP driver keeps multipart upload names flat, while PHP normally nests files[].
+    app()->bind(FileUploadController::class, fn () => new class extends FileUploadController
+    {
+        public function handle()
+        {
+            $files = request()->files;
+            if ($files->has('files[]')) {
+                $files->set('files', [$files->get('files[]')]);
+            }
+
+            return parent::handle();
+        }
+    });
 
     $page = visit(route('login'))->resize(390, 844)
         ->type('email', $parent->email)
@@ -27,17 +45,24 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
     $page->navigate('/parent/questions')
         ->assertPresent('html[lang="he"][dir="rtl"]')
         ->click('שאלה חדשה')
-        ->fill('[data-test="draft-prompt"]', 'מה רואים ביום בשמיים?')
-        ->fill('[data-test="draft-correct-answer"]', 'שמש')
-        ->fill('[data-test="draft-distractor-one"]', 'לווייתן')
-        ->fill('[data-test="draft-distractor-two"]', 'רכבת')
-        ->fill('[data-test="draft-distractor-three"]', 'פרח')
-        ->fill('[data-test="draft-explanation"]', 'השמש מאירה את היום.')
+        ->fill('[data-test="draft-prompt"]', 'מה התוצאה של 2 + 3?')
+        ->select('[data-test="draft-correct-answer-type"]', 'number')
+        ->fill('[data-test="draft-correct-answer"]', '5')
+        ->select('[data-test="draft-distractor-one-type"]', 'audio')
+        ->fill('[data-test="draft-distractor-one-alternative"]', 'טון קצר')
+        ->attach('[data-test="draft-distractor-one-upload"] input[type="file"]', __DIR__.'/Fixtures/tone.wav')
+        ->fill('[data-test="draft-distractor-two"]', 'שש')
+        ->fill('[data-test="draft-distractor-three"]', 'שבע')
+        ->fill('[data-test="draft-explanation"]', 'חמש היא התשובה.')
+        ->click('הוספת מקור')
+        ->fill('[data-test="draft-source"]', 'https://example.com/reviewer-source')
         ->click('[data-test="draft-quiz-eligible"]')
         ->click('[data-test="create-question-submit"]')
-        ->assertSee('מה רואים ביום בשמיים?')
+        ->assertSee('מה התוצאה של 2 + 3?')
         ->click('tbody tr:first-child [data-test="review-question"]')
-        ->assertValue('[data-test="draft-explanation"]', 'השמש מאירה את היום.')
+        ->assertValue('[data-test="draft-explanation"]', 'חמש היא התשובה.')
+        ->assertValue('[data-test="draft-source"]', 'https://example.com/reviewer-source')
+        ->assertPresent('a[href="https://example.com/reviewer-source"]')
         ->click('[data-test="publish-question-submit"]')
         ->assertSee('השאלה פורסמה')
         ->assertNoJavaScriptErrors();
@@ -51,15 +76,26 @@ test('parents publish Hebrew content in Filament and a child plays it on a phone
         ->assertSee('חידון הניצוצות')
         ->assertPresent('main[dir="rtl"]')
         ->click('[data-test="start-run"]')
-        ->assertSee('מה רואים ביום בשמיים?')
-        ->assertDontSee('השמש מאירה את היום.')
-        ->click('לווייתן')
-        ->assertSee('השמש מאירה את היום.')
+        ->assertSee('מה התוצאה של 2 + 3?')
+        ->assertSeeIn('h2 bdi[dir="ltr"]', '2 + 3')
+        ->assertPresent('audio[controls][preload="none"]')
+        ->assertSeeIn('audio + figcaption', 'טון קצר')
+        ->assertDontSee('https://example.com/reviewer-source')
+        ->assertDontSee('חמש היא התשובה.');
+
+    expect($page->script('(async () => {
+        const audio = document.querySelector("audio");
+        await audio.play();
+        return audio.duration > 0;
+    })()'))->toBeTrue();
+
+    $page->click('div:has(> figure audio) > [data-test="choose-answer"]')
+        ->assertSee('חמש היא התשובה.')
         ->assertSee('התשובה הנכונה')
         ->refresh()
         ->assertSee('שאלה 1 מתוך 8')
-        ->assertSee('מה רואים ביום בשמיים?')
-        ->assertSee('השמש מאירה את היום.')
+        ->assertSee('מה התוצאה של 2 + 3?')
+        ->assertSee('חמש היא התשובה.')
         ->assertPresent('[data-test="advance"]')
         ->assertNoJavaScriptErrors();
 

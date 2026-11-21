@@ -22,6 +22,10 @@ class HebrewQuizServiceProvider extends ServiceProvider
                 Route::get('/', [QuizController::class, 'show'])->name('show');
                 Route::post('/', [QuizController::class, 'start'])->name('start');
                 Route::post('{run}/answer', [QuizController::class, 'answer'])->whereNumber('run')->name('answer');
+                Route::get('{run}/questions/{question}/media/{slot}', [QuizController::class, 'media'])
+                    ->whereNumber(['run', 'question'])
+                    ->whereIn('slot', ['prompt', '0', '1', '2', '3'])
+                    ->name('media');
                 Route::post('{run}/advance', [QuizController::class, 'advance'])->whereNumber('run')->name('advance');
             });
     }

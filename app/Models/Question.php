@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $team_id
  * @property int|null $question_generation_batch_id
  * @property string|null $generation_media_suggestion
- * @property array<string, string|list<string>|null> $content
+ * @property array<string, mixed> $content
  * @property int $difficulty
  * @property int $target_age
  * @property list<string>|null $subjects

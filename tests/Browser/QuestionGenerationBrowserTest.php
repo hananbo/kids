@@ -51,7 +51,7 @@ test('AI questions enter the quiz only after a parent reviews and publishes them
         ->click('tr:has-text("מה נוצר כשמים קופאים?") [data-test="review-question"]')
         ->assertSee('בהכנה לפרסום')
         ->assertSee('צילום של קרח נמס')
-        ->assertSee('https://example.com/water')
+        ->assertPresent('a[href="https://example.com/water"]')
         ->assertValue('[data-test="draft-explanation"]', 'בטמפרטורה נמוכה מספיק מים הופכים לקרח.')
         ->click('[data-test="publish-question-submit"]')
         ->assertSee('השאלה פורסמה')

@@ -5,19 +5,17 @@ namespace App\Filament\Parent\Resources\Questions;
 use App\Actions\Catalog\PublishQuestion;
 use App\Actions\Catalog\WithdrawQuestionVersion;
 use App\Filament\Parent\Resources\Questions\Pages\ManageQuestions;
+use App\Filament\Schemas\QuestionSchema;
 use App\Models\PublishedQuestionVersion;
 use App\Models\Question;
+use App\Support\Catalog\QuestionContent;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -46,7 +44,7 @@ class QuestionResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            ...self::draftFields(),
+            ...QuestionSchema::fields(),
             Textarea::make('generation_media_suggestion')
                 ->label('הצעת מדיה מההעשרה')
                 ->maxLength(1000)
@@ -63,13 +61,15 @@ class QuestionResource extends Resource
                     ->whereNull('shared_from_version_id'),
             ]))
             ->columns([
-                TextColumn::make('content.prompt')->label('שאלה')->wrap(),
+                TextColumn::make('content.prompt')->label('שאלה')->state(fn (Question $record): string => QuestionContent::label($record->content['prompt'] ?? null))->wrap(),
                 TextColumn::make('difficulty')->label('קושי'),
                 TextColumn::make('publishedVersion.id')->label('מצב')->formatStateUsing(fn (): string => 'פורסמה')->placeholder('טיוטה'),
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
-                EditAction::make()->iconButton()
+                EditAction::make()
+                    ->iconButton()
+                    ->mutateRecordDataUsing(fn (array $data): array => ['content' => QuestionContent::normalize($data['content'])] + $data)
                     ->extraAttributes(['data-test' => 'edit-question'])
                     ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-test' => 'save-question'])),
                 Action::make('publish')
@@ -83,7 +83,7 @@ class QuestionResource extends Resource
                         : 'בהכנה לפרסום. בדקו את השאלה, התשובות וההסבר שיופיעו במשחק.')
                     ->fillForm(fn (Question $record): array => [
                         'revision' => $record->draftRevision(),
-                        'content' => $record->content,
+                        'content' => QuestionContent::normalize($record->content),
                         'difficulty' => $record->difficulty,
                         'target_age' => $record->target_age,
                         'subjects' => $record->subjects,
@@ -91,7 +91,7 @@ class QuestionResource extends Resource
                     ])
                     ->schema([
                         Hidden::make('revision'),
-                        ...self::draftFields(readOnly: true),
+                        ...QuestionSchema::fields(readOnly: true),
                         TextEntry::make('generation_media_suggestion')
                             ->label('הצעת מדיה מההעשרה')
                             ->visible(fn (Question $record): bool => filled($record->generation_media_suggestion)),
@@ -139,45 +139,5 @@ class QuestionResource extends Resource
     public static function getPages(): array
     {
         return ['index' => ManageQuestions::route('/')];
-    }
-
-    /** @return list<Field> */
-    public static function draftFields(bool $readOnly = false): array
-    {
-        return [
-            TextInput::make('content.prompt')
-                ->label('שאלה')->required()->maxLength(255)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-prompt']),
-            TextInput::make('content.correct_answer')
-                ->label('תשובה נכונה')->required()->maxLength(255)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-correct-answer']),
-            TextInput::make('content.distractor_one')
-                ->label('תשובה שגויה ראשונה')->required()->maxLength(255)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-distractor-one']),
-            TextInput::make('content.distractor_two')
-                ->label('תשובה שגויה שנייה')->required()->maxLength(255)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-distractor-two']),
-            TextInput::make('content.distractor_three')
-                ->label('תשובה שגויה שלישית')->required()->maxLength(255)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-distractor-three']),
-            Textarea::make('content.explanation')
-                ->label('הסבר')->required()->maxLength(2000)->disabled($readOnly)
-                ->extraInputAttributes(['data-test' => 'draft-explanation']),
-            Textarea::make('content.hint')
-                ->label('רמז')->maxLength(1000)->disabled($readOnly),
-            TagsInput::make('content.sources')
-                ->label('מקורות לסקירה')
-                ->nestedRecursiveRules(['required', 'url:http,https', 'max:2048'])
-                ->disabled($readOnly),
-            TagsInput::make('subjects')
-                ->label('נושאים')->nestedRecursiveRules(['required', 'string', 'max:60'])->disabled($readOnly),
-            TextInput::make('target_age')
-                ->label('גיל יעד')->integer()->minValue(1)->maxValue(18)->default(6)->required()->disabled($readOnly),
-            TextInput::make('difficulty')
-                ->label('רמת קושי')->integer()->minValue(1)->maxValue(10)->default(1)->required()->disabled($readOnly),
-            Toggle::make('quiz_eligible')
-                ->label('מתאימה לחידון הניצוצות')->disabled($readOnly)
-                ->extraAttributes(['data-test' => 'draft-quiz-eligible']),
-        ];
     }
 }

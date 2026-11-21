@@ -4,14 +4,16 @@ namespace App\Filament\Resources\CatalogQuestionVersions;
 
 use App\Actions\Catalog\ShareQuestionVersion;
 use App\Actions\Catalog\WithdrawQuestionVersion;
-use App\Filament\Parent\Resources\Questions\QuestionResource;
 use App\Filament\Resources\CatalogQuestionVersions\Pages\ListCatalogQuestionVersions;
+use App\Filament\Schemas\QuestionSchema;
 use App\Models\PublishedQuestionVersion;
+use App\Support\Catalog\QuestionContent;
 use Filament\Actions\Action;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
 class CatalogQuestionVersionResource extends Resource
@@ -36,7 +38,7 @@ class CatalogQuestionVersionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('content.prompt')->label('Question')->wrap(),
+                TextColumn::make('content.prompt')->label('Question')->state(fn (PublishedQuestionVersion $record): string => QuestionContent::label($record->content['prompt'] ?? null))->wrap(),
                 TextColumn::make('question.team.name')->label('Household'),
                 TextColumn::make('locale')->label('Language'),
                 TextColumn::make('id')->label('Version'),
@@ -50,10 +52,14 @@ class CatalogQuestionVersionResource extends Resource
                         && ! $record->getAttribute('shared_copy_exists'))
                     ->modalHeading('Review the exact published version')
                     ->modalSubmitActionLabel('Approve for Shared Catalog')
-                    ->fillForm(fn (PublishedQuestionVersion $record): array => $record->only([
-                        'content', 'difficulty', 'target_age', 'subjects', 'quiz_eligible',
-                    ]))
-                    ->schema(QuestionResource::draftFields(readOnly: true))
+                    ->fillForm(fn (PublishedQuestionVersion $record): array => [
+                        'content' => QuestionContent::normalize($record->content),
+                        ...$record->only(['difficulty', 'target_age', 'subjects', 'quiz_eligible']),
+                    ])
+                    ->schema(QuestionSchema::fields(
+                        readOnly: true,
+                        mediaUrl: fn (Model $record, string $field): string => route('admin.catalog-versions.media', ['version' => $record, 'field' => $field]),
+                    ))
                     ->successNotificationTitle('Question version shared')
                     ->action(function (PublishedQuestionVersion $record, Action $action, ShareQuestionVersion $share): void {
                         $share($record);

@@ -9,6 +9,7 @@ use App\Filament\Parent\Resources\SharedQuestions\Pages\ListSharedQuestions;
 use App\Models\Question;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Catalog\QuestionContent;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -41,7 +42,7 @@ class SharedQuestionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('sharedVersion.content.prompt')->label('שאלה')->wrap(),
+                TextColumn::make('sharedVersion.content.prompt')->label('שאלה')->state(fn (Question $record): string => QuestionContent::label($record->sharedVersion?->content['prompt'] ?? null))->wrap(),
                 TextColumn::make('sharedVersion.difficulty')->label('קושי'),
             ])
             ->defaultSort('id', 'desc')

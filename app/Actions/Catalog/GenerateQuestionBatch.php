@@ -6,6 +6,7 @@ use App\Ai\Agents\AssessHebrewQuestions;
 use App\Ai\Agents\EnrichHebrewQuestions;
 use App\Models\Question;
 use App\Models\QuestionGenerationBatch;
+use App\Support\Catalog\QuestionContent;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +98,7 @@ class GenerateQuestionBatch
         $questions = $batch->questions()->get();
         $prompts = $questions->values()->map(fn (Question $question, int $index): array => [
             'question_number' => $index + 1,
-            ...Arr::only($question->content, self::QUESTION_FIELDS),
+            ...array_map(QuestionContent::label(...), Arr::only($question->content, self::QUESTION_FIELDS)),
         ]);
         $response = $this->enrich->prompt($prompts->toJson(JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), timeout: 20);
         $items = $this->questionsFrom($response, $questions->count(), [

@@ -7,6 +7,7 @@ use App\Models\Question;
 use App\Models\QuizRun;
 use App\Models\QuizRunQuestion;
 use App\Models\User;
+use App\Support\Catalog\QuestionContent;
 use Database\Seeders\HebrewQuizSeeder;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
@@ -39,14 +40,14 @@ test('a revised question stays pinned to each run and withdrawal ends only affec
     Filament::setCurrentPanel(Filament::getPanel('parent'));
     Livewire::test(ManageQuestions::class)
         ->callAction(TestAction::make('edit')->table($question), data: [
-            'content' => [...$question->content, 'prompt' => $revisedPrompt],
+            'content' => QuestionContent::normalize([...$question->content, 'prompt' => $revisedPrompt]),
         ])->assertHasNoActionErrors();
 
     $this->withSession(['child_mode' => $childMode])->post($start)->assertRedirect($play);
     $active = $child->quizRuns()->latest('id')->firstOrFail();
     $firstQuestion = $active->questions()->firstOrFail();
     $this->get($play)->assertInertia(fn (Assert $page) => $page
-        ->where('question.prompt', $oldVersion->content['prompt'])
+        ->where('question.prompt.value', $oldVersion->content['prompt'])
         ->etc()
     );
 
@@ -57,7 +58,7 @@ test('a revised question stays pinned to each run and withdrawal ends only affec
 
     $this->withSession(['child_mode' => $childMode])->get($play)->assertInertia(fn (Assert $page) => $page
         ->where('run.id', $active->id)
-        ->where('question.prompt', $oldVersion->content['prompt'])
+        ->where('question.prompt.value', $oldVersion->content['prompt'])
         ->etc()
     );
 
@@ -70,7 +71,7 @@ test('a revised question stays pinned to each run and withdrawal ends only affec
 
     $this->withSession(['child_mode' => $siblingMode])->get($play)->assertInertia(fn (Assert $page) => $page
         ->where('run.cancelled', false)
-        ->where('question.prompt', $revisedPrompt)
+        ->where('question.prompt.value', $revisedPrompt)
         ->etc()
     );
 

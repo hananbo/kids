@@ -1,6 +1,12 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import type { QuizField } from '@/components/games/question-field';
+import {
+    BidiText,
+    isMedia,
+    QuestionField,
+} from '@/components/games/question-field';
 import { Button } from '@/components/ui/button';
 import { exit } from '@/routes/child-mode';
 import { advance, answer, start } from '@/routes/quiz/play';
@@ -26,8 +32,8 @@ type Props = {
     } | null;
     question: {
         id: number;
-        prompt: string;
-        choices: string[];
+        prompt: QuizField;
+        choices: QuizField[];
         feedback: Feedback | null;
     } | null;
 };
@@ -87,39 +93,68 @@ export default function HebrewQuiz({
                                     max={run.total}
                                 />
                             </div>
-                            <h2 className="text-2xl font-semibold" dir="auto">
-                                {question.prompt}
-                            </h2>
+                            {isMedia(question.prompt) ? (
+                                <QuestionField field={question.prompt} />
+                            ) : (
+                                <h2 className="text-2xl font-semibold">
+                                    <QuestionField field={question.prompt} />
+                                </h2>
+                            )}
                             <div className="grid gap-3">
-                                {question.choices.map((choice, index) => (
-                                    <Button
-                                        key={index}
-                                        variant={
-                                            feedback?.selected === index
-                                                ? 'secondary'
-                                                : 'outline'
-                                        }
-                                        disabled={
-                                            processing || Boolean(feedback)
-                                        }
-                                        data-test="choose-answer"
-                                        className="min-h-12 justify-start rounded-xl px-4 py-2 text-wrap"
-                                        onClick={() =>
-                                            submit(
-                                                answer.url({
-                                                    current_team: team,
-                                                    run: run.id,
-                                                }),
-                                                {
-                                                    question: question.id,
-                                                    choice: index,
-                                                },
-                                            )
-                                        }
-                                    >
-                                        <bdi>{choice}</bdi>
-                                    </Button>
-                                ))}
+                                {question.choices.map((choice, index) => {
+                                    const button = (
+                                        <Button
+                                            key={index}
+                                            variant={
+                                                feedback?.selected === index
+                                                    ? 'secondary'
+                                                    : 'outline'
+                                            }
+                                            disabled={
+                                                processing || Boolean(feedback)
+                                            }
+                                            data-test="choose-answer"
+                                            className="min-h-12 justify-start rounded-xl px-4 py-2 text-wrap"
+                                            onClick={() =>
+                                                submit(
+                                                    answer.url({
+                                                        current_team: team,
+                                                        run: run.id,
+                                                    }),
+                                                    {
+                                                        question: question.id,
+                                                        choice: index,
+                                                    },
+                                                )
+                                            }
+                                        >
+                                            {isMedia(choice) ? (
+                                                <>
+                                                    בחירה:{' '}
+                                                    <BidiText
+                                                        value={
+                                                            choice.alternative
+                                                        }
+                                                    />
+                                                </>
+                                            ) : (
+                                                <QuestionField field={choice} />
+                                            )}
+                                        </Button>
+                                    );
+
+                                    return isMedia(choice) ? (
+                                        <div
+                                            key={index}
+                                            className="grid gap-2 rounded-xl border p-3"
+                                        >
+                                            <QuestionField field={choice} />
+                                            {button}
+                                        </div>
+                                    ) : (
+                                        button
+                                    );
+                                })}
                             </div>
                             {feedback && (
                                 <div
@@ -131,10 +166,14 @@ export default function HebrewQuiz({
                                             ? 'נכון!'
                                             : 'התשובה הנכונה היא '}
                                         {!feedback.correct && (
-                                            <bdi>{feedback.answer}</bdi>
+                                            <BidiText value={feedback.answer} />
                                         )}
                                     </p>
-                                    <p dir="auto">{feedback.explanation}</p>
+                                    <p>
+                                        <BidiText
+                                            value={feedback.explanation}
+                                        />
+                                    </p>
                                 </div>
                             )}
                             {feedback && (
