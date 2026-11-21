@@ -36,6 +36,19 @@ class SelectQuizQuestions
             throw ValidationException::withMessages(['pool' => implode(' ', $shortages)]);
         }
 
+        // Expand beyond the minimum pool evenly across the approved difficulty groups.
+        if (array_sum(array_map(fn (array $group): int => $group['versions']->count(), $groups)) >= count(PrizeLadder::FULL)) {
+            $remaining = count(PrizeLadder::FULL) - array_sum(array_column($groups, 'required'));
+            while ($remaining > 0) {
+                foreach ($groups as $index => $group) {
+                    if ($remaining > 0 && $group['required'] < $group['versions']->count()) {
+                        $groups[$index]['required']++;
+                        $remaining--;
+                    }
+                }
+            }
+        }
+
         $lastSeen = $this->lastSeen($profile);
         $selected = collect();
 
@@ -58,6 +71,20 @@ class SelectQuizQuestions
     public function poolShortages(ChildProfile $profile): array
     {
         return $this->shortages($this->questionGroups($profile, $this->progress->highestLevel($profile)));
+    }
+
+    /**
+     * @param  list<int>  $pinnedQuestionIds
+     * @return Collection<int, PublishedQuestionVersion>
+     */
+    public function extensionPool(ChildProfile $profile, int $level, int $minimumDifficulty, array $pinnedQuestionIds): Collection
+    {
+        return collect($this->questionGroups($profile, $level))
+            ->flatMap(fn (array $group): Collection => $group['versions'])
+            ->where('difficulty', '>=', $minimumDifficulty)
+            ->whereNotIn('question_id', $pinnedQuestionIds)
+            ->sortBy('difficulty')
+            ->values();
     }
 
     /** @return list<array{difficulties: list<int>, required: int, versions: Collection<int, PublishedQuestionVersion>}> */

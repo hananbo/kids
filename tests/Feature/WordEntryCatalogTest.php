@@ -120,7 +120,7 @@ test('shared word entries do not supply the Hebrew quiz question pool', function
     app(HebrewQuizSeeder::class)->run($team);
     $this->post(route('quiz.play.start', $team))->assertRedirect($play);
     $this->get($play)->assertInertia(fn (Assert $page) => $page
-        ->where('run.total', 8)
+        ->where('run.total', 15)
         ->where('question.prompt.value', fn (string $prompt): bool => $prompt !== $published->content['word'])
         ->etc()
     );

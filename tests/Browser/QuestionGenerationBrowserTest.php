@@ -36,7 +36,7 @@ test('AI questions enter the quiz only after a parent reviews and publishes them
         ->assertSee('טיוטה');
 
     $page->navigate('/parent/child-profiles')
-        ->click('[data-test="select-child"]')
+        ->click('[data-test="select-child-hebrew-quiz"]')
         ->click('[data-test="start-run"]')
         ->assertDontSee('מה נוצר כשמים קופאים?')
         ->assertPresent('[data-test="start-run"]');
@@ -62,12 +62,14 @@ test('AI questions enter the quiz only after a parent reviews and publishes them
         ->assertSee('1 מתוך 1 פורסמו');
 
     $page->navigate('/parent/child-profiles')
-        ->click('[data-test="select-child"]')
+        ->click('[data-test="select-child-hebrew-quiz"]')
         ->click('[data-test="start-run"]')
+        ->click('[data-test="open-question"]')
         ->assertSee('מה נוצר כשמים קופאים?')
         ->assertDontSee('https://example.com/water')
         ->assertDontSee('צילום של קרח נמס')
         ->click('קרח')
+        ->click('[data-test="lock-answer"]')
         ->assertSee('בטמפרטורה נמוכה מספיק מים הופכים לקרח.')
         ->assertNoJavaScriptErrors();
 });

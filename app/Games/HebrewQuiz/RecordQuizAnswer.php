@@ -21,7 +21,10 @@ class RecordQuizAnswer
 
             $question = $run->questions()->where('position', $run->position)->firstOrFail();
 
-            if ($question->id !== $questionId || $question->answered_at) {
+            $fifty = $run->lifelines['fifty'] ?? null;
+            $eliminated = $fifty && $fifty['question'] === $questionId && in_array($choice, $fifty['result'], true);
+
+            if ($question->id !== $questionId || $question->answered_at || $eliminated) {
                 return;
             }
 

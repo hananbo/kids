@@ -18,7 +18,28 @@ class AddSecurityHeaders
     {
         Vite::useCspNonce();
 
-        $response = $next($request);
+        // Vite serves development modules and imported styles from a separate loopback origin.
+        $devOrigins = '';
+        if (app()->isLocal() && preg_match('~^(https?)://(?:localhost|127\.0\.0\.1|\[::1\]):([0-9]{1,5})/?$~D', Vite::devServerUrl() ?? '', $match)) {
+            $devOrigins = " {$match[1]}://127.0.0.1:{$match[2]} {$match[1]}://localhost:{$match[2]}";
+        }
+        $hotFile = Vite::hotFile();
+        $useBuild = $devOrigins !== '' && ! in_array($request->ip(), ['127.0.0.1', '::1'], true)
+            && is_file(public_path('build/manifest.json'));
+
+        // A phone on the LAN cannot reach the developer computer through its own loopback address.
+        if ($useBuild) {
+            Vite::useHotFile(storage_path('framework/vite-build-only'));
+            $devOrigins = '';
+        }
+        try {
+            $response = $next($request);
+        } finally {
+            if ($useBuild) {
+                Vite::useHotFile($hotFile);
+            }
+        }
+
         $nonce = Vite::cspNonce();
         $scriptPolicy = "script-src 'self' 'nonce-{$nonce}'";
 
@@ -35,10 +56,10 @@ class AddSecurityHeaders
             "frame-ancestors 'none'",
             "form-action 'self'",
             "img-src 'self' data: blob:",
-            "font-src 'self' data:",
-            $scriptPolicy,
-            "style-src 'self' 'unsafe-inline'",
-            app()->isLocal() ? "connect-src 'self' ws: wss:" : "connect-src 'self'",
+            "font-src 'self' data:{$devOrigins}",
+            $scriptPolicy.$devOrigins,
+            "style-src 'self' 'unsafe-inline'{$devOrigins}",
+            app()->isLocal() ? "connect-src 'self' ws: wss:{$devOrigins}" : "connect-src 'self'",
         ]);
 
         $response->headers->set(

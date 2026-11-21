@@ -26,7 +26,7 @@ class AdvanceQuizRun
 
             $nextPosition = $run->position + 1;
 
-            if ($run->questions()->where('position', $nextPosition)->exists()) {
+            if ($question->is_correct && $run->questions()->where('position', $nextPosition)->exists()) {
                 $run->update(['position' => $nextPosition]);
 
                 return;
@@ -34,6 +34,7 @@ class AdvanceQuizRun
 
             $run->update([
                 'completed_at' => now(),
+                'outcome' => $question->is_correct ? 'won' : 'lost',
                 'unlocked_level' => $this->progress->unlockedLevelAfter($run),
             ]);
         });

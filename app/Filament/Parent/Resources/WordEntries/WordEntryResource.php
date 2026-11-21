@@ -77,7 +77,7 @@ class WordEntryResource extends Resource
                     ->maxLength(CatalogLocale::MAX_LENGTH)->regex(CatalogLocale::PATTERN)
                     ->required()->live(onBlur: true)
                     ->afterStateUpdated(fn (?string $state, WordEntry $record, Set $set) => $set('content', $record->localizations[$state] ?? [])),
-                ...WordEntrySchema::fields(),
+                ...WordEntrySchema::fields(includeWheelSettings: false),
             ])
             ->successNotificationTitle('טיוטת התרגום נשמרה')
             ->action(function (WordEntry $record, array $data, Action $action, SaveCatalogLocalization $save): void {
@@ -88,7 +88,7 @@ class WordEntryResource extends Resource
 
     private static function publishAction(bool $localized): Action
     {
-        return ReviewCatalogPublication::make($localized, WordEntrySchema::fields(readOnly: true))
+        return ReviewCatalogPublication::make($localized, WordEntrySchema::fields(readOnly: true, includeWheelSettings: ! $localized))
             ->extraAttributes(['data-test' => $localized ? 'review-word-entry-localization' : 'review-word-entry'])
             ->modalHeading('אישור הערך לפרסום')
             ->modalSubmitAction(fn (Action $action): Action => $action->label('פרסום')->extraAttributes(['data-test' => 'publish-word-entry']))

@@ -26,5 +26,9 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->callWith(WordEntrySeeder::class, ['team' => $parent->currentTeam]);
+
+        if (isset(app(GamePackages::class)->all()['word-wheel'])) {
+            $this->callWith(WordWheelSeeder::class, ['team' => $parent->currentTeam]);
+        }
     }
 }

@@ -28,6 +28,13 @@ class QuizController
             ? $run->questions()->with('version')->where('position', $run->position)->firstOrFail()
             : null;
 
+        $total = $run?->questions()->count() ?? 0;
+        $prizes = $total === count(PrizeLadder::FULL) ? PrizeLadder::FULL : PrizeLadder::SHORT;
+        $stars = $run?->stars() ?? 0;
+        $cleared = $run ? $run->position + (int) ($question?->is_correct === true || $run->outcome === 'won') : 0;
+        $earned = $prizes[$cleared - 1] ?? 0;
+        $lost = $run?->outcome === 'lost' || ($question?->answered_at && ! $question->is_correct);
+        $lifelines = $run->lifelines ?? [];
         $content = $question?->version->content;
 
         return Inertia::render('games/hebrew-quiz', [
@@ -41,21 +48,34 @@ class QuizController
             'run' => $run ? [
                 'level' => $run->level,
                 'unlockedLevel' => $run->unlocked_level,
-                'stars' => $run->stars(),
+                'stars' => $stars,
+                'prizes' => $prizes,
+                'safetyPrizes' => PrizeLadder::GUARANTEES,
+                'payout' => PrizeLadder::payout($earned, $lost),
+                'outcome' => $run->outcome,
                 'id' => $run->id,
                 'position' => $run->position + 1,
-                'total' => $run->questions()->count(),
+                'total' => $total,
                 'completed' => $run->completed_at !== null,
                 'cancelled' => $run->cancelled_at !== null,
             ] : null,
             'question' => $run && $question && $content ? [
                 'id' => $question->id,
+                'lifelines' => [
+                    'fiftyUsed' => isset($lifelines['fifty']),
+                    'advisorUsed' => isset($lifelines['advisor']) || $run->hint_position !== null,
+                    'advisorChoice' => ($lifelines['advisor']['question'] ?? null) === $question->id ? $lifelines['advisor']['result'][0] : null,
+                    'audienceUsed' => isset($lifelines['audience']),
+                    'eliminated' => ($lifelines['fifty']['question'] ?? null) === $question->id ? $lifelines['fifty']['result'] : [],
+                    'votes' => ($lifelines['audience']['question'] ?? null) === $question->id ? $lifelines['audience']['result'] : null,
+                ],
                 'hintAvailable' => $run->canRevealHintFor($question),
                 'hint' => $run->hint_position === $question->position ? $question->approvedHint() : null,
                 'prompt' => $this->playerField($current_team, $run, $question, 'prompt'),
                 'choices' => array_map(fn (int $slot): array => $this->playerField($current_team, $run, $question, (string) $slot), array_keys($question->choice_order)),
                 'feedback' => $question->answered_at ? [
                     'selected' => $question->selected_choice,
+                    'correctIndex' => array_search('correct_answer', $question->choice_order, true),
                     'correct' => $question->is_correct,
                     'answer' => QuestionContent::label($content['correct_answer']),
                     'explanation' => $content['explanation'],
@@ -87,6 +107,24 @@ class QuizController
         $input = $request->validate(['question' => ['required', 'integer']]);
 
         $revealHint($selectedRun, (int) $input['question']);
+
+        return redirect()->route('quiz.play.show', $current_team);
+    }
+
+    public function walk(Request $request, Team $current_team, int $run, WalkAwayFromQuiz $walk): RedirectResponse
+    {
+        $selectedRun = $this->runs(EnsureChildPlay::profile($request))->findOrFail($run);
+        $input = $request->validate(['question' => ['required', 'integer']]);
+        $walk($selectedRun, (int) $input['question']);
+
+        return redirect()->route('quiz.play.show', $current_team);
+    }
+
+    public function lifeline(Request $request, Team $current_team, int $run, UseQuizLifeline $use): RedirectResponse
+    {
+        $selectedRun = $this->runs(EnsureChildPlay::profile($request))->findOrFail($run);
+        $input = $request->validate(['question' => ['required', 'integer'], 'kind' => ['required', 'in:fifty,audience,advisor']]);
+        $use($selectedRun, (int) $input['question'], $input['kind']);
 
         return redirect()->route('quiz.play.show', $current_team);
     }

@@ -49,4 +49,10 @@ class ChildProfile extends Model
     {
         return $this->hasMany(QuizRun::class);
     }
+
+    /** @return HasMany<WordWheelAttempt, $this> */
+    public function wordWheelAttempts(): HasMany
+    {
+        return $this->hasMany(WordWheelAttempt::class);
+    }
 }

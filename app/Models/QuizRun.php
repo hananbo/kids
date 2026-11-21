@@ -16,6 +16,8 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $child_profile_id
  * @property string $game
+ * @property string|null $outcome
+ * @property array<string, array{question: int, result: list<int>}>|null $lifelines
  * @property int $position
  * @property int $level
  * @property int|null $unlocked_level
@@ -24,7 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $cancelled_at
  * @property-read ChildProfile $childProfile
  */
-#[Fillable(['child_profile_id', 'game', 'position', 'level', 'unlocked_level', 'hint_position', 'completed_at'])]
+#[Fillable(['child_profile_id', 'game', 'position', 'level', 'unlocked_level', 'hint_position', 'outcome', 'lifelines', 'completed_at'])]
 class QuizRun extends Model
 {
     /** @use HasFactory<QuizRunFactory> */
@@ -36,6 +38,7 @@ class QuizRun extends Model
     {
         return [
             'position' => 'integer',
+            'lifelines' => 'array',
             'level' => 'integer',
             'unlocked_level' => 'integer',
             'hint_position' => 'integer',
@@ -60,6 +63,7 @@ class QuizRun extends Model
     {
         return $this->isActive()
             && $this->hint_position === null
+            && ! isset($this->lifelines['advisor'])
             && $question->quiz_run_id === $this->id
             && $question->position === $this->position
             && $question->answered_at === null

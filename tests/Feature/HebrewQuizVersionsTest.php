@@ -95,7 +95,7 @@ test('a revised question stays pinned to each run and withdrawal ends only affec
     $this->get($play)->assertInertia(fn (Assert $page) => $page
         ->where('run.id', fn (int $runId): bool => $runId !== $active->id)
         ->where('run.cancelled', false)
-        ->where('run.total', 8)
+        ->where('run.total', 15)
         ->etc()
     );
 });
@@ -120,5 +120,5 @@ test('withdrawing a current version keeps its previous approvals out of new runs
         ->assertRedirect(route('quiz.play.show', $team));
 
     $pinnedVersions = $child->quizRuns()->sole()->questions()->pluck('published_question_version_id')->all();
-    expect($pinnedVersions)->toHaveCount(8)->not->toContain($currentVersion->id, $previousVersion->id);
+    expect($pinnedVersions)->toHaveCount(15)->not->toContain($currentVersion->id, $previousVersion->id);
 });

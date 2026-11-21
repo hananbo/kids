@@ -53,7 +53,7 @@ test('a child cannot access another household or use a different child profile f
     $this->get("/{$parent->currentTeam->slug}/quiz")->assertForbidden();
 });
 
-test('a run pins eight approved questions and accepts only the first answer', function () {
+test('a run pins fifteen approved questions and accepts only the first answer', function () {
     $parent = User::factory()->create();
     $team = $parent->currentTeam;
     $child = ChildProfile::factory()->for($team)->create();
@@ -77,14 +77,14 @@ test('a run pins eight approved questions and accepts only the first answer', fu
 
     $run = $child->quizRuns()->sole();
     $questions = $run->questions()->with('version')->get();
-    expect($questions->pluck('version.difficulty')->all())->toBe([1, 1, 1, 2, 2, 2, 3, 3])
-        ->and($questions->pluck('version.question_id')->unique())->toHaveCount(8)
+    expect($questions->pluck('version.difficulty')->all())->toBe($questions->pluck('version.difficulty')->sort()->values()->all())
+        ->and($questions->pluck('version.question_id')->unique())->toHaveCount(15)
         ->and($questions->pluck('version.question_id')->all())->not->toContain($draft->id, $otherQuestion->id);
 
     $first = $questions->first();
     $page = $this->get($play)->assertInertia(fn (Assert $page) => $page
         ->component('games/hebrew-quiz')
-        ->where('run.total', 8)
+        ->where('run.total', 15)
         ->where('question.id', $first->id)
         ->has('question.choices', 4)
         ->where('question.feedback', null)

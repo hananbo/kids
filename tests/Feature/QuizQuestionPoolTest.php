@@ -132,7 +132,7 @@ test('launch seed supplies two nonoverlapping runs at the configured starting le
 
     $firstRun = $profile->quizRuns()->sole();
     foreach ($firstRun->questions as $runQuestion) {
-        $this->post(route('quiz.play.answer', [$team, $firstRun]), ['question' => $runQuestion->id, 'choice' => 0])->assertSessionHasNoErrors();
+        $this->post(route('quiz.play.answer', [$team, $firstRun]), ['question' => $runQuestion->id, 'choice' => array_search('correct_answer', $runQuestion->choice_order, true)])->assertSessionHasNoErrors();
         $this->post(route('quiz.play.advance', [$team, $firstRun]), ['question' => $runQuestion->id])->assertSessionHasNoErrors();
     }
 
@@ -143,7 +143,7 @@ test('launch seed supplies two nonoverlapping runs at the configured starting le
         $firstRun->questions()->pluck('published_question_version_id'),
     ))->toBeEmpty();
     expect($firstRun->questions()->with('version')->get()->pluck('version.target_age')->max())->toBe($age < 6 ? 1 : 6);
-    expect(Question::query()->whereBelongsTo($team)->count())->toBe(96);
+    expect(Question::query()->whereBelongsTo($team)->count())->toBe(138);
     expect(Question::query()->whereBelongsTo($anotherHousehold)->count())->toBe(0);
 })->with([1, 2, 3])->with([1, 2, 3, 4, 5, 6, 18]);
 

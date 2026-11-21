@@ -5,6 +5,7 @@ use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\Filament\ParentPanelProvider;
 use App\Providers\FortifyServiceProvider;
 use App\Providers\Games\HebrewQuizServiceProvider;
+use App\Providers\Games\WordWheelServiceProvider;
 use App\Providers\HorizonServiceProvider;
 
 return [
@@ -13,5 +14,6 @@ return [
     ParentPanelProvider::class,
     FortifyServiceProvider::class,
     HebrewQuizServiceProvider::class,
+    WordWheelServiceProvider::class,
     HorizonServiceProvider::class,
 ];

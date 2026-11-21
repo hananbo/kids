@@ -54,6 +54,8 @@ class HebrewQuizServiceProvider extends ServiceProvider
                     ->whereIn('slot', ['prompt', '0', '1', '2', '3'])
                     ->name('media');
                 Route::post('{run}/hint', [QuizController::class, 'hint'])->whereNumber('run')->name('hint');
+                Route::post('{run}/walk', [QuizController::class, 'walk'])->name('walk');
+                Route::post('{run}/lifeline', [QuizController::class, 'lifeline'])->name('lifeline');
                 Route::post('{run}/advance', [QuizController::class, 'advance'])->whereNumber('run')->name('advance');
             });
     }

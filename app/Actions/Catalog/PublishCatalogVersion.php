@@ -39,6 +39,10 @@ class PublishCatalogVersion
                     'meaning' => ['required', 'string', 'max:2000'],
                     'hints' => ['nullable', 'array', 'list', 'max:10'],
                     'hints.*' => ['required', 'string', 'max:500'],
+                    'wheel_eligible' => ['sometimes', 'boolean'],
+                    'target_age' => ['nullable', 'integer', 'between:1,18'],
+                    'subjects' => ['nullable', 'array', 'list'],
+                    'subjects.*' => ['required', 'string', 'max:60'],
                 ])->validate()];
 
             $version = $draft->versions()->create([

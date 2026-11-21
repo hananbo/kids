@@ -58,8 +58,8 @@ test('availability gates new starts at both scopes while active runs can finish'
     $this->get($play)->assertInertia(fn (Assert $page) => $page
         ->where('available', false)
         ->where('run.completed', true)
-        ->where('run.stars', 8)
-        ->where('progress.stars', 8)
+        ->where('run.stars', 15)
+        ->where('progress.stars', 15)
         ->etc()
     );
     $this->from($play)->post($start)->assertRedirect($play)->assertSessionHasErrors('game');
@@ -72,10 +72,10 @@ test('availability gates new starts at both scopes while active runs can finish'
     $this->get($play)->assertInertia(fn (Assert $page) => $page
         ->where('available', true)
         ->where('run.completed', false)
-        ->where('progress.stars', 8)
+        ->where('progress.stars', 15)
         ->etc()
     );
 
     expect($child->quizRuns()->count())->toBe(2)
-        ->and($run->questions()->where('is_correct', true)->count())->toBe(8);
+        ->and($run->questions()->where('is_correct', true)->count())->toBe(15);
 });

@@ -43,7 +43,7 @@ test('only two consecutive completed runs scoring at least six stars unlock the 
             $choice = $position < $score ? $correctChoice : ($correctChoice + 1) % 4;
             $this->post($answer, ['question' => $question->id, 'choice' => $choice])->assertRedirect($play);
 
-            if ($position === 7) {
+            if ($position === $score) {
                 $this->get($play)->assertInertia(fn (Assert $page) => $page
                     ->where('run.completed', false)
                     ->where('run.stars', $score)
@@ -53,6 +53,9 @@ test('only two consecutive completed runs scoring at least six stars unlock the 
             }
 
             $this->post($advance, ['question' => $question->id])->assertRedirect($play);
+            if ($position === $score) {
+                break;
+            }
         }
 
         $totalStars += $score;

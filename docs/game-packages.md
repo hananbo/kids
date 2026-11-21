@@ -5,10 +5,27 @@ The platform installs standalone packages at deploy time. Filament controls whet
 ## Package checklist
 
 1. Identify whether the game consumes Questions or Word Entries. Specify the fields, media, and language requirements that a published item must satisfy to be playable.
-2. Give the package ownership of the original game UI and rules. Use the host's mobile-first player experience and support RTL and mixed-direction content. Choose a renderer suited to the game. The first graphics-heavy game uses WebAssembly.
+2. Give the package ownership of its game UI and rules. Use the host's mobile-first player experience, support RTL and mixed-direction content, and start with the shared browser graphics runtime for 2D scenes.
 3. Use Laravel to retrieve approved, game-eligible content for the active child profile. Keep answer keys server-side until the rules allow answers to be revealed. Use Laravel to record attempts and progress by child profile and game.
 4. Respect the publishing and availability decisions. Edits keep the last approved version playable. Runs keep the versions selected at their start. Withdrawal ends active runs using a withdrawn version. Disabling a game allows active runs to finish and preserves progress.
 5. Verify the full flow in an end-to-end test. Publish valid content in Filament, play it in Hebrew RTL at a phone viewport, submit an answer, and check progress on the selected child profile. Exercise missing translations, unapproved content, and game availability as failure paths.
+
+## Browser graphics
+
+PixiJS 8 with WebGL 2 is the shared renderer for 2D games. The quiz already uses PixiJS and needs sprites, meshes, particles, and timed effects layered with Hebrew controls. This replaces the initial WebAssembly assumption in [the package decision](adr/0004-install-game-packages-at-deploy-time.md). PixiJS recommends WebGL for production and labels its WebGPU and Canvas 2D renderers experimental. [PixiJS renderer guide](https://pixijs.com/8.x/guides/components/renderers)
+
+| Engine | Where it fits |
+| --- | --- |
+| **PixiJS 8** | Default for 2D games that want a scene graph, custom shaders, and control over drawing. Its ticker drives animation and its particle container can limit GPU uploads to changing attributes. [Ticker](https://pixijs.com/8.x/guides/components/ticker), [Particle container](https://pixijs.com/8.x/guides/components/scene-objects/particle-container) |
+| Phaser 4 | Revisit for a game that needs an integrated scene manager, physics, cameras, input, or tilemaps. [Phaser API](https://docs.phaser.io/api-documentation/function/core), [Scenes](https://docs.phaser.io/phaser/concepts/scenes) |
+| Three.js | Revisit for a game with an actual 3D world. Its WebGPU renderer can use a WebGL 2 backend and comes with a separate material and post-processing model. [Three.js renderer guide](https://threejs.org/manual/pages/webgpurenderer) |
+| Godot web export | Revisit when a game needs Godot's editor or native exports. Its browser build requires WebAssembly and the WebGL 2 Compatibility renderer. Threaded builds require cross-origin isolation. [Godot web export guide](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html) |
+
+Mount [`GameCanvas`](../resources/js/components/games/game-canvas.tsx) in a game-owned container with a defined size. Pass a `GameScene` factory that builds the scene with the provided PixiJS module, root stage, and canvas. Use `resize(width, height)` to lay out the scene in CSS pixels, `update(deltaSeconds, reducedMotion)` to advance effects, and `dispose()` to release resources the scene owns, such as custom shaders. Keep the factory's visual state independent of the server-authoritative game state. Send accepted game events and current phase into the scene instead of recreating the renderer on every transition.
+
+The shared canvas loads PixiJS on demand using its CSP-compatible extension. It owns the rendering loop, resolution cap, visibility pauses, context-loss recovery, and renderer cleanup. Give every decorative scene a static fallback and keep answer controls, text, and media in accessible HTML. For games that require a rendered playfield, opt in to `reducedMotion="render"` and suppress decorative motion when the scene receives the reduced-motion flag. [PixiJS application lifecycle](https://pixijs.com/8.x/guides/components/application), [PixiJS CSP extension](https://github.com/pixijs/pixijs/blob/dev/src/unsafe-eval/init.ts)
+
+Verify effects and game controls on mobile and desktop. Check that reduced motion and renderer failure still expose the game's fallback and that leaving and reopening the game mounts a fresh scene.
 
 ## Register a game
 

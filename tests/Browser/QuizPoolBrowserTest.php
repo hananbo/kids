@@ -27,7 +27,7 @@ test('a parent saves independent learning settings and sees missing groups in Fi
         ->fill('[data-test="child-subjects"]', 'טבע')
         ->keys('[data-test="child-subjects"]', 'Enter')
         ->click('[data-test="save-child"]')
-        ->click('tr:has-text("נועה") [data-test="inspect-pool"]')
+        ->click('tr:has-text("נועה") [data-test="inspect-pool-hebrew-quiz"]')
         ->assertSee('רמת קושי 8–9: 0 מתוך 3 שאלות מאושרות.')
         ->assertNoJavaScriptErrors();
 

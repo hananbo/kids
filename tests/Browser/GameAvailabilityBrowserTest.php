@@ -10,8 +10,9 @@ test('Filament switches control platform and household starts without clearing t
     ChildProfile::factory()->for($household)->create();
     app(HebrewQuizSeeder::class)->run($household);
 
-    $platform = '[data-test="platform-game-toggle"] [role="switch"]';
-    $householdToggle = '[data-test="household-game-toggle"] [role="switch"]';
+    $quizRow = 'tr:has-text("חידון הניצוצות")';
+    $platform = $quizRow.' [data-test="platform-game-toggle"] [role="switch"]';
+    $householdToggle = $quizRow.' [data-test="household-game-toggle"] [role="switch"]';
     $page = visit(route('login'))->resize(390, 844)
         ->type('email', $admin->email)
         ->type('password', 'password')
@@ -22,10 +23,10 @@ test('Filament switches control platform and household starts without clearing t
         ->assertSee('חידון הניצוצות')
         ->assertPresent($householdToggle.'[aria-checked="true"]')
         ->click($householdToggle)
-        ->assertPresent('[data-test="household-game-toggle"] [role="status"]:has-text("Change saved.")')
+        ->assertPresent($quizRow.' [data-test="household-game-toggle"] [role="status"]:has-text("Change saved.")')
         ->assertPresent($householdToggle.'[aria-checked="false"]')
         ->navigate('/parent/child-profiles')
-        ->click('[data-test="select-child"]')
+        ->click('[data-test="select-child-hebrew-quiz"]')
         ->assertSee('החידון אינו זמין כרגע.')
         ->assertNotPresent('[data-test="start-run"]')
         ->assertNoJavaScriptErrors();
@@ -39,7 +40,7 @@ test('Filament switches control platform and household starts without clearing t
     $page->navigate('/admin/games')
         ->assertPresent($platform.'[aria-checked="true"]')
         ->click($platform)
-        ->assertPresent('[data-test="platform-game-toggle"] [role="status"]:has-text("Change saved.")')
+        ->assertPresent($quizRow.' [data-test="platform-game-toggle"] [role="status"]:has-text("Change saved.")')
         ->assertPresent($platform.'[aria-checked="false"]')
         ->navigate('/parent/games')
         ->assertSee('מושבת בפלטפורמה')
@@ -49,16 +50,18 @@ test('Filament switches control platform and household starts without clearing t
     $page->navigate('/admin/games')
         ->assertPresent($platform.'[aria-checked="false"]')
         ->click($platform)
-        ->assertPresent('[data-test="platform-game-toggle"] [role="status"]:has-text("Change saved.")')
+        ->assertPresent($quizRow.' [data-test="platform-game-toggle"] [role="status"]:has-text("Change saved.")')
         ->assertPresent($platform.'[aria-checked="true"]')
         ->navigate('/parent/games')
         ->assertPresent($householdToggle.'[aria-checked="false"]')
         ->click($householdToggle)
-        ->assertPresent('[data-test="household-game-toggle"] [role="status"]:has-text("Change saved.")')
+        ->assertPresent($quizRow.' [data-test="household-game-toggle"] [role="status"]:has-text("Change saved.")')
         ->assertPresent($householdToggle.'[aria-checked="true"]')
         ->navigate('/parent/child-profiles')
-        ->click('[data-test="select-child"]')
+        ->click('[data-test="select-child-hebrew-quiz"]')
         ->click('[data-test="start-run"]')
-        ->assertSee('שאלה 1 מתוך 8')
+        ->assertSee('שאלה 1 מתוך 15')
+        ->click('[data-test="open-question"]')
+        ->assertPresent('main[data-stage="playing"]')
         ->assertNoJavaScriptErrors();
 });
