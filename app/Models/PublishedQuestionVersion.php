@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Database\Factories\PublishedQuestionVersionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -40,6 +43,22 @@ class PublishedQuestionVersion extends Model
             'quiz_eligible' => 'boolean',
             'withdrawn_at' => 'datetime',
         ];
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function current(Builder $query, bool $shared = false): void
+    {
+        $query->whereNull('published_question_versions.withdrawn_at')
+            ->where('published_question_versions.id', '=', function (QueryBuilder $candidate) use ($shared): void {
+                $candidate->from('published_question_versions as candidate')
+                    ->select('candidate.id')
+                    ->whereColumn('candidate.question_id', 'published_question_versions.question_id')
+                    ->whereColumn('candidate.locale', 'published_question_versions.locale')
+                    ->whereNull('candidate.shared_from_version_id', not: $shared)
+                    ->orderByDesc($shared ? 'candidate.shared_from_version_id' : 'candidate.id')
+                    ->limit(1);
+            });
     }
 
     /** @return HasOne<self, $this> */

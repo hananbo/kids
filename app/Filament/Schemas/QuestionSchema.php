@@ -4,6 +4,7 @@ namespace App\Filament\Schemas;
 
 use App\Enums\QuestionFieldType;
 use App\Models\Question;
+use App\Support\Catalog\QuestionContent;
 use App\Support\Catalog\QuestionMedia;
 use Closure;
 use Filament\Actions\Action;
@@ -28,7 +29,7 @@ class QuestionSchema
      * @param  (Closure(Model, string): ?string)|null  $mediaUrl
      * @return list<Component>
      */
-    public static function fields(bool $readOnly = false, ?Closure $mediaUrl = null): array
+    public static function fields(bool $readOnly = false, ?Closure $mediaUrl = null, bool $localizationDraft = false): array
     {
         $labels = [
             'prompt' => 'שאלה',
@@ -40,13 +41,13 @@ class QuestionSchema
 
         $fields = [];
         foreach ($labels as $name => $label) {
-            $fields[] = self::field($name, $label, $readOnly, $mediaUrl);
+            $fields[] = self::field($name, $label, $readOnly, $mediaUrl, $localizationDraft);
         }
 
-        return [
+        $content = [
             ...$fields,
             Textarea::make('content.explanation')
-                ->label('הסבר')->required()->maxLength(2000)->disabled($readOnly)
+                ->label('הסבר')->required(! $localizationDraft)->maxLength(2000)->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => 'draft-explanation']),
             Textarea::make('content.hint')
                 ->label('רמז')->maxLength(1000)->disabled($readOnly)
@@ -68,6 +69,14 @@ class QuestionSchema
                 ->defaultItems(0)
                 ->disabled($readOnly)
                 ->addActionLabel('הוספת מקור'),
+        ];
+
+        if ($localizationDraft) {
+            return $content;
+        }
+
+        return [
+            ...$content,
             TagsInput::make('subjects')
                 ->label('נושאים')->nestedRecursiveRules(['required', 'string', 'max:60'])->disabled($readOnly),
             TextInput::make('target_age')
@@ -81,26 +90,35 @@ class QuestionSchema
     }
 
     /** @param (Closure(Model, string): ?string)|null $mediaUrl */
-    private static function field(string $name, string $label, bool $readOnly, ?Closure $mediaUrl): Fieldset
+    private static function field(string $name, string $label, bool $readOnly, ?Closure $mediaUrl, bool $localizationDraft): Fieldset
     {
         $input = str_replace('_', '-', $name);
         $type = fn (Get $get): ?QuestionFieldType => QuestionFieldType::tryFrom((string) $get("content.$name.type"));
         $isMedia = fn (Get $get): bool => $type($get)?->isMedia() ?? false;
+        $inherits = fn (Get $get): bool => $localizationDraft && in_array($get("content.$name.type"), [null, '', 'inherit'], true);
+        $shared = fn (?Model $record): ?array => $record instanceof Question
+            ? QuestionContent::sharedField($record->content[$name] ?? null)
+            : null;
 
         return Fieldset::make($label)->columns(1)->schema([
             Select::make("content.$name.type")
                 ->label('סוג תוכן')
-                ->options(collect(QuestionFieldType::cases())->mapWithKeys(fn (QuestionFieldType $field): array => [$field->value => $field->label()])->all())
-                ->default(QuestionFieldType::Text->value)
+                ->options(fn (?Model $record): array => [
+                    ...($localizationDraft && $shared($record) !== null ? ['inherit' => 'שימוש בערך המשותף'] : []),
+                    ...collect(QuestionFieldType::cases())->mapWithKeys(fn (QuestionFieldType $field): array => [$field->value => $field->label()])->all(),
+                ])
+                ->default(fn (?Model $record): ?string => $localizationDraft
+                    ? ($shared($record) !== null ? 'inherit' : null)
+                    : QuestionFieldType::Text->value)
                 ->live()
-                ->required()
+                ->required(! $localizationDraft)
                 ->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => "draft-$input-type"]),
             TextInput::make("content.$name.value")
                 ->label($label)
-                ->visible(fn (Get $get): bool => ! $isMedia($get))
+                ->visible(fn (Get $get): bool => ! $isMedia($get) && ! $inherits($get))
                 ->numeric(fn (Get $get): bool => $type($get) === QuestionFieldType::Number)
-                ->required()->maxLength(255)->disabled($readOnly)
+                ->required(! $localizationDraft)->maxLength(255)->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => "draft-$input"]),
             FileUpload::make("content.$name.path")
                 ->label('קובץ מדיה')
@@ -111,10 +129,15 @@ class QuestionSchema
                 ->acceptedFileTypes(fn (Get $get): array => $type($get)?->mimeTypes() ?? [])
                 ->maxSize(12288)
                 ->preventFilePathTampering()
-                ->getUploadedFileUsing(function (string $file, ?Model $record) use ($name, $mediaUrl): ?array {
+                ->getUploadedFileUsing(function (string $file, ?Model $record, Get $get) use ($name, $mediaUrl, $readOnly): ?array {
                     $url = $record && $mediaUrl
                         ? $mediaUrl($record, $name)
-                        : ($record instanceof Question ? route('parent.questions.media', ['question' => $record, 'field' => $name]) : null);
+                        : ($record instanceof Question ? route('parent.questions.media', [
+                            'question' => $record,
+                            'field' => $name,
+                            'locale' => $get('locale'),
+                            'revision' => $readOnly ? $get('revision') : null,
+                        ]) : null);
 
                     if (! $url) {
                         return null;
@@ -126,13 +149,18 @@ class QuestionSchema
                 })
                 ->previewable(false)
                 ->openable()
-                ->required()->disabled($readOnly)
+                ->required(! $localizationDraft)->disabled($readOnly)
                 ->extraAttributes(['data-test' => "draft-$input-upload"]),
             TextInput::make("content.$name.alternative")
                 ->label('חלופה כתובה')
-                ->visible($isMedia)
-                ->required()->maxLength(500)->disabled($readOnly)
+                ->visible(fn (Get $get, ?Model $record): bool => $isMedia($get)
+                    || ($inherits($get) && isset($shared($record)['path'])))
+                ->required(! $localizationDraft)->maxLength(500)->disabled($readOnly)
                 ->extraInputAttributes(['data-test' => "draft-$input-alternative"]),
+            Toggle::make("content.$name.shared")
+                ->label('שיתוף קובץ המדיה בין שפות')
+                ->extraAttributes(['data-test' => "draft-$input-shared"])
+                ->visible(fn (Get $get): bool => ! $readOnly && ! $localizationDraft && $isMedia($get)),
         ]);
     }
 }

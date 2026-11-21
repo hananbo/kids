@@ -16,7 +16,7 @@ class RestoreSharedQuestion
         DB::transaction(function () use ($source, $household): void {
             $replacement = $source->replacements()->whereBelongsTo($household)->lockForUpdate()->firstOrFail();
 
-            abort_if($replacement->publishedVersion()->exists(), 409, 'יש להסיר את הגרסה הפרטית לפני שחזור השאלה המקורית.');
+            abort_if($replacement->livePrivateVersions()->exists(), 409, 'יש להסיר את הגרסה הפרטית לפני שחזור השאלה המקורית.');
 
             $replacement->forceFill(['suppresses_original' => false])->save();
         });

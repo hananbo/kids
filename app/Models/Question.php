@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\Catalog\CatalogLocale;
+use App\Support\Catalog\CatalogRevision;
+use App\Support\Catalog\QuestionContent;
 use Database\Factories\QuestionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int|null $question_generation_batch_id
  * @property string|null $generation_media_suggestion
  * @property array<string, mixed> $content
+ * @property array<string, array<string, mixed>>|null $localizations
  * @property int $difficulty
  * @property int $target_age
  * @property list<string>|null $subjects
@@ -41,6 +44,7 @@ class Question extends Model
     {
         return [
             'content' => 'array',
+            'localizations' => 'array',
             'difficulty' => 'integer',
             'target_age' => 'integer',
             'subjects' => 'array',
@@ -61,24 +65,22 @@ class Question extends Model
         return $this->hasMany(PublishedQuestionVersion::class);
     }
 
-    /** @return HasOne<PublishedQuestionVersion, $this> */
-    public function publishedVersion(): HasOne
+    /** @return HasMany<PublishedQuestionVersion, $this> */
+    public function livePrivateVersions(): HasMany
     {
-        return $this->hasOne(PublishedQuestionVersion::class)
-            ->ofMany(['id' => 'max'], fn (Builder $query) => $query
-                ->where('locale', 'he')
-                ->whereNull('shared_from_version_id'))
-            ->whereNull('published_question_versions.withdrawn_at');
+        return $this->versions()->current();
     }
 
     /** @return HasOne<PublishedQuestionVersion, $this> */
-    public function sharedVersion(): HasOne
+    public function publishedVersion(string $locale = CatalogLocale::BASE): HasOne
     {
-        return $this->hasOne(PublishedQuestionVersion::class)
-            ->ofMany(['shared_from_version_id' => 'max', 'id' => 'max'], fn (Builder $query) => $query
-                ->where('locale', 'he')
-                ->whereNotNull('shared_from_version_id'))
-            ->whereNull('published_question_versions.withdrawn_at');
+        return $this->hasOne(PublishedQuestionVersion::class)->where('locale', $locale)->current();
+    }
+
+    /** @return HasOne<PublishedQuestionVersion, $this> */
+    public function sharedVersion(string $locale = CatalogLocale::BASE): HasOne
+    {
+        return $this->hasOne(PublishedQuestionVersion::class)->where('locale', $locale)->current(shared: true);
     }
 
     /** @return HasMany<Question, $this> */
@@ -93,8 +95,20 @@ class Question extends Model
         return $this->belongsTo(PublishedQuestionVersion::class, 'copied_from_version_id');
     }
 
-    public function draftRevision(): string
+    /** @return array<string, mixed> */
+    public function localizedDraft(string $locale): array
     {
-        return hash('sha256', serialize([$this->content, $this->difficulty, $this->target_age, $this->subjects, $this->quiz_eligible]));
+        if ($locale === CatalogLocale::BASE) {
+            return QuestionContent::normalize($this->content);
+        }
+
+        return QuestionContent::localized($this->content, $this->localizations[$locale] ?? []);
+    }
+
+    public function draftRevision(string $locale = CatalogLocale::BASE): string
+    {
+        return CatalogRevision::hash([
+            $locale, $this->localizedDraft($locale), $this->difficulty, $this->target_age, $this->subjects, $this->quiz_eligible,
+        ]);
     }
 }

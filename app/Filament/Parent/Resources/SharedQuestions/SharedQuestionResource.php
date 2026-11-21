@@ -35,7 +35,7 @@ class SharedQuestionResource extends Resource
             ->withWhereHas('sharedVersion')
             ->with(['replacements' => fn (Relation $replacements): Relation => $replacements
                 ->where('team_id', $teamId)
-                ->with('publishedVersion')]);
+                ->withExists('livePrivateVersions')]);
     }
 
     public static function table(Table $table): Table
@@ -62,7 +62,7 @@ class SharedQuestionResource extends Resource
                     ->visible(function (Question $record): bool {
                         $replacement = $record->replacements->first();
 
-                        return $replacement?->suppresses_original && $replacement->publishedVersion === null;
+                        return $replacement?->suppresses_original && ! $replacement->getAttribute('live_private_versions_exists');
                     })
                     ->requiresConfirmation()
                     ->successNotificationTitle('השאלה המקורית חזרה למאגר')
