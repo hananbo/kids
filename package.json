@@ -31,7 +31,7 @@
         "prettier": "^3.4.2",
         "prettier-plugin-tailwindcss": "^0.8.1",
         "pusher-js": "^8.6.0",
-        "typescript-eslint": "^8.23.0"
+        "typescript-eslint": "^8.74.0"
     },
     "dependencies": {
         "@inertiajs/react": "^3.0.0",
